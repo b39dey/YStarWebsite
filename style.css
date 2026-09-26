@@ -1,0 +1,487 @@
+:root {
+  --bg: #07111f;
+  --bg-soft: #0d1b2d;
+  --card: rgba(255, 255, 255, 0.055);
+  --border: rgba(255, 255, 255, 0.12);
+  --text: #f5f7fb;
+  --muted: #aeb9c8;
+  --gold: #f2c14e;
+  --blue: #4da3ff;
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: Arial, Helvetica, sans-serif;
+  background:
+    radial-gradient(circle at top, #17345c 0%, #07111f 38%, #040a12 100%);
+  color: var(--text);
+  line-height: 1.6;
+}
+
+a {
+  color: inherit;
+  text-decoration: none;
+}
+
+/* NAVIGATION */
+
+header {
+  position: sticky;
+  top: 0;
+  z-index: 100;
+  background: rgba(4, 10, 18, 0.82);
+  backdrop-filter: blur(14px);
+  border-bottom: 1px solid var(--border);
+}
+
+.navbar {
+  max-width: 1150px;
+  margin: auto;
+  padding: 18px 24px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.logo {
+  color: var(--gold);
+  font-size: 1.25rem;
+  font-weight: 800;
+  letter-spacing: 2px;
+}
+
+.nav-links {
+  display: flex;
+  gap: 28px;
+}
+
+.nav-links a {
+  color: var(--muted);
+  transition: 0.2s;
+}
+
+.nav-links a:hover {
+  color: white;
+}
+
+/* HERO */
+
+.hero {
+  min-height: 620px;
+  max-width: 1050px;
+  margin: auto;
+  padding: 130px 24px 90px;
+  text-align: center;
+}
+
+.network {
+  display: inline-block;
+  color: var(--gold);
+  border: 1px solid rgba(242, 193, 78, 0.35);
+  background: rgba(242, 193, 78, 0.08);
+  padding: 7px 15px;
+  border-radius: 50px;
+  font-size: 0.78rem;
+  letter-spacing: 2px;
+  margin-bottom: 24px;
+}
+
+.hero h1 {
+  font-size: clamp(3rem, 8vw, 6rem);
+  line-height: 1;
+  letter-spacing: -3px;
+}
+
+.symbol {
+  margin-top: 12px;
+  color: var(--gold);
+  font-size: 1.8rem;
+  font-weight: 700;
+  letter-spacing: 8px;
+}
+
+.hero-text {
+  max-width: 650px;
+  margin: 28px auto;
+  color: var(--muted);
+  font-size: 1.15rem;
+}
+
+.contract-box {
+  max-width: 720px;
+  margin: 42px auto 0;
+  padding: 20px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.contract-box span,
+.address-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  margin-bottom: 8px;
+}
+
+code {
+  color: #dcecff;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+/* CONTENT */
+
+.section {
+  max-width: 1050px;
+  margin: 0 auto;
+  padding: 90px 24px;
+}
+
+.section h2 {
+  font-size: 2.3rem;
+  margin-bottom: 22px;
+}
+
+.section > p {
+  max-width: 760px;
+  color: var(--muted);
+  margin-bottom: 16px;
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 16px;
+  margin-top: 38px;
+}
+
+.card {
+  padding: 25px;
+  min-height: 125px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+
+.card span {
+  display: block;
+  color: var(--muted);
+  font-size: 0.85rem;
+  margin-bottom: 12px;
+}
+
+.card strong {
+  font-size: 1.08rem;
+}
+
+.address-card {
+  margin-top: 25px;
+  padding: 25px;
+  background: rgba(77, 163, 255, 0.06);
+  border: 1px solid rgba(77, 163, 255, 0.25);
+  border-radius: 16px;
+}
+
+.small {
+  margin-top: 14px;
+  font-size: 0.9rem;
+}
+
+/* SECURITY */
+
+.security {
+  margin-top: 50px;
+  margin-bottom: 90px;
+  background: rgba(242, 193, 78, 0.055);
+  border: 1px solid rgba(242, 193, 78, 0.25);
+  border-radius: 24px;
+}
+
+.security h3 {
+  color: var(--gold);
+  margin-bottom: 18px;
+}
+
+.security code {
+  display: block;
+  margin: 22px 0;
+  padding: 18px;
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 12px;
+}
+
+/* FOOTER */
+
+footer {
+  border-top: 1px solid var(--border);
+  padding: 45px 24px;
+  text-align: center;
+  color: var(--muted);
+}
+
+footer strong {
+  color: white;
+}
+
+footer p {
+  margin-top: 6px;
+  font-size: 0.9rem;
+}
+
+/* MOBILE */
+
+@media (max-width: 760px) {
+  .navbar {
+    flex-direction: column;
+    gap: 14px;
+  }
+
+  .nav-links {
+    gap: 14px;
+    font-size: 0.85rem;
+  }
+
+  .hero {
+    padding-top: 90px;
+  }
+
+  .grid {
+    grid-template-columns: 1fr;
+  }
+
+  .section {
+    padding-top: 65px;
+    padding-bottom: 65px;
+  }
+.hero-buttons {
+  margin-top: 20px;
+  display: flex;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+button,
+.button {
+  display: inline-block;
+  padding: 11px 18px;
+  border-radius: 10px;
+  border: 1px solid var(--gold);
+  background: var(--gold);
+  color: #07111f;
+  font-weight: 700;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+
+button:hover,
+.button:hover {
+  opacity: 0.9;
+}
+
+.button.secondary {
+  background: transparent;
+  color: var(--gold);
+}
+
+.pool-button {
+  margin-top: 18px;
+  background: transparent;
+  color: var(--blue);
+  border-color: var(--blue);
+}
+/* ===== YST ACTION BUTTONS ===== */
+
+.hero-buttons {
+  margin-top: 18px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.hero-buttons button,
+.hero-buttons .button,
+.pool-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+
+  min-height: 42px;
+  padding: 10px 18px;
+
+  border-radius: 10px;
+  border: 1px solid #f4c95d;
+
+  font-family: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+
+  cursor: pointer;
+
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border-color 0.2s ease;
+}
+
+/* Copy Contract */
+
+.hero-buttons button {
+  background: #f4c95d;
+  color: #07111f;
+}
+
+/* View Verified Contract */
+
+.hero-buttons .button {
+  background: transparent;
+  color: #f4c95d;
+}
+
+/* PancakeSwap Pool */
+
+.pool-button {
+  margin-top: 16px;
+  background: transparent;
+  color: #63c7ff;
+  border-color: #63c7ff;
+}
+
+/* Hover */
+
+.hero-buttons button:hover,
+.hero-buttons .button:hover,
+.pool-button:hover {
+  transform: translateY(-2px);
+}
+
+/* Mobile */
+
+@media (max-width: 600px) {
+  .hero-buttons {
+    flex-direction: column;
+  }
+
+  .hero-buttons button,
+  .hero-buttons .button {
+    width: 100%;
+    max-width: 280px;
+  }
+}
+/* ===== FORCE YST HERO BUTTON STYLE ===== */
+
+.contract-box .hero-buttons {
+  margin-top: 18px !important;
+  display: flex !important;
+  justify-content: center !important;
+  align-items: center !important;
+  gap: 14px !important;
+  flex-wrap: wrap !important;
+}
+
+.contract-box .hero-buttons button,
+.contract-box .hero-buttons a {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  min-height: 44px !important;
+  padding: 10px 20px !important;
+
+  border-radius: 10px !important;
+  border: 1px solid #f4c95d !important;
+
+  font-size: 14px !important;
+  font-weight: 700 !important;
+  line-height: 1 !important;
+
+  text-decoration: none !important;
+  box-sizing: border-box !important;
+}
+
+/* Copy Contract */
+.contract-box .hero-buttons button {
+  background: #f4c95d !important;
+  color: #07111f !important;
+}
+
+/* View Verified Contract */
+.contract-box .hero-buttons a {
+  background: transparent !important;
+  color: #f4c95d !important;
+}
+
+/* Pool button */
+a.pool-button {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+
+  margin-top: 18px !important;
+  padding: 10px 18px !important;
+
+  border: 1px solid #63c7ff !important;
+  border-radius: 10px !important;
+
+  background: transparent !important;
+  color: #63c7ff !important;
+
+  font-weight: 700 !important;
+  text-decoration: none !important;
+}
+}/* ===== DESKTOP ACTION BUTTONS ===== */
+
+.contract-box .hero-buttons {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 12px;
+    margin-top: 14px;
+    flex-wrap: wrap;
+}
+
+.contract-box .hero-buttons button,
+.contract-box .hero-buttons a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    min-height: 44px;
+    padding: 10px 20px;
+
+    border-radius: 10px;
+    border: 1px solid #f4c95d;
+
+    font-size: 14px;
+    font-weight: 700;
+    line-height: 1;
+
+    text-decoration: none;
+    box-sizing: border-box;
+}
+
+.contract-box .hero-buttons button {
+    background: #f4c95d;
+    color: #07111f;
+    cursor: pointer;
+}
+
+.contract-box .hero-buttons a {
+    background: transparent;
+    color: #f4c95d;
+}
