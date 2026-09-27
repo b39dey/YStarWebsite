@@ -485,3 +485,10 @@ a.pool-button {
     background: transparent;
     color: #f4c95d;
 }
+.yst-logo {
+    width: 120px;
+    height: 120px;
+    object-fit: contain;
+    display: block;
+    margin: 22px auto 12px;
+}
