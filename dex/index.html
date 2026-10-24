@@ -1,0 +1,53 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow"><meta name="theme-color" content="#07111f">
+<title>YStar DEX | Safe Preview</title>
+<style>
+:root{color-scheme:dark;--bg:#07111f;--panel:#102139;--line:#344761;--gold:#f2c14e;--muted:#b4c4d8}
+*{box-sizing:border-box}body{margin:0;background:radial-gradient(circle at top,#17345c,var(--bg) 55%);color:#f5f7fb;font:16px/1.55 system-ui,Arial,sans-serif;padding:20px}
+main{max-width:640px;margin:30px auto}.panel{background:var(--panel);border:1px solid var(--line);border-radius:18px;padding:26px}h1{margin:0 0 6px}.muted{color:var(--muted)}.flag{display:inline-block;background:#493918;color:#ffe09a;padding:7px 12px;border-radius:8px;font-weight:700;margin:12px 0 20px}
+label{display:block;margin-top:18px;font-weight:650}input{display:block;width:100%;background:#081627;border:1px solid #7890a9;border-radius:9px;padding:14px;color:white;font:inherit;margin-top:7px}button{border:0;border-radius:9px;padding:13px 18px;background:var(--gold);color:#07111f;font-weight:750;cursor:pointer}button:disabled{opacity:.5;cursor:not-allowed}.row{display:flex;justify-content:space-between;gap:14px;padding:11px 0;border-bottom:1px solid var(--line)}.row span:last-child{text-align:right;overflow-wrap:anywhere}.actions{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0}.notice{border:1px solid #8b7137;padding:12px;border-radius:10px;background:#332b1b}.error{color:#ffb3b3}.success{color:#a2edbb}a{color:#ffe09a}small{display:block;margin-top:15px}.addresses{font-size:12px;overflow-wrap:anywhere}#status{min-height:3em}
+</style>
+</head>
+<body>
+<main><p><a href="/">← Y-Star Token official website</a></p>
+<section class="panel">
+<h1>Y★STAR DEX</h1><p class="muted">YST / USDT · BNB Smart Chain (Chain ID 56)</p>
+<div class="flag">PREVIEW ONLY · TRADING DISABLED</div>
+<p class="notice">This page can connect to a wallet and read blockchain data. It cannot request approvals, signatures, or transactions. Quotes are indicative, not executable offers.</p>
+<div class="actions"><button id="connect">Connect wallet</button><button id="refresh" type="button">Refresh quote</button></div>
+<div class="row"><span>Wallet</span><span id="wallet">Not connected</span></div>
+<div class="row"><span>Network</span><span id="network">Not checked</span></div>
+<label for="amount">You pay (USDT)</label><input id="amount" type="text" inputmode="decimal" autocomplete="off" spellcheck="false" value="0.10" aria-describedby="amountHelp"><small id="amountHelp" class="muted">Maximum 18 decimal places. No funds are moved.</small>
+<div class="row"><span>Estimated receive</span><span id="receive">—</span></div>
+<div class="row"><span>Minimum at 0.5% slippage</span><span id="minimum">—</span></div>
+<div class="row"><span>Pool reserves</span><span id="reserves">—</span></div>
+<div class="row"><span>Your USDT balance</span><span id="usdtBalance">—</span></div>
+<div class="row"><span>Your YST balance</span><span id="ystBalance">—</span></div>
+<div class="actions"><button disabled aria-disabled="true">Approve (disabled)</button><button disabled aria-disabled="true">Swap (disabled)</button></div>
+<p id="status" role="status" aria-live="polite">Connect a wallet or refresh public pool data.</p>
+<p class="addresses muted">YST: <a href="https://bscscan.com/address/0x2E9803942dAf364a803f4C01D3E49D431dDf1421" target="_blank" rel="noopener noreferrer">0x2E9803942dAf364a803f4C01D3E49D431dDf1421</a><br>AMM: <a href="https://bscscan.com/address/0x17dAc8A164Ce434fE36A2D6029Bf4431a22397e2" target="_blank" rel="noopener noreferrer">0x17dAc8A164Ce434fE36A2D6029Bf4431a22397e2</a></p>
+</section></main>
+<script>
+'use strict';
+// READ-ONLY PUBLIC PREVIEW: No eth_sendTransaction, personal_sign, eth_sign, or approval calls.
+const C=Object.freeze({chain:'0x38',amm:'0x17dAc8A164Ce434fE36A2D6029Bf4431a22397e2',yst:'0x2E9803942dAf364a803f4C01D3E49D431dDf1421',usdt:'0x55d398326f99059fF775485246999027B3197955',base:10n**18n});
+const SEL=Object.freeze({tokenA:'0x0fc63d10',tokenB:'0x5f64b55b',reserveA:'0xdc5fa6c5',reserveB:'0x19e36f3b',balanceOf:'0x70a08231'});
+const el=id=>document.getElementById(id);const same=(a,b)=>String(a).toLowerCase()===String(b).toLowerCase();const word=s=>String(s).replace(/^0x/,'').padStart(64,'0');
+let account=null, generation=0;
+function status(s,bad=false){el('status').textContent=s;el('status').className=bad?'error':'success'}
+function format(n,d=8){const a=n/C.base,b=(n%C.base).toString().padStart(18,'0').slice(0,d).replace(/0+$/,'');return a+(b?'.'+b:'')}
+function parseAmount(s){if(!/^(?:0|[1-9]\d*)(?:\.\d{1,18})?$/.test(s))throw Error('Enter a valid nonnegative USDT amount (up to 18 decimals)');const [a,b='']=s.split('.');const n=BigInt(a)*C.base+BigInt((b+'0'.repeat(18)).slice(0,18));if(n<=0n)throw Error('Amount must be greater than zero');if(n>10n**36n)throw Error('Amount too large');return n}
+async function rpc(method,params=[]){if(!window.ethereum?.request)throw Error('No EIP-1193 wallet detected');return window.ethereum.request({method,params})}
+async function call(to,data){const r=await rpc('eth_call',[{to,data},'latest']);if(!/^0x[0-9a-fA-F]+$/.test(r||'')||r==='0x')throw Error('Invalid on-chain response');return BigInt(r)}
+function clearQuote(){for(const id of ['receive','minimum','reserves','usdtBalance','ystBalance'])el(id).textContent='—'}
+async function refresh(){const g=++generation;clearQuote();try{const chain=await rpc('eth_chainId');el('network').textContent=same(chain,C.chain)?'BSC Mainnet (56)':'Wrong network';if(!same(chain,C.chain))throw Error('Select BSC Mainnet in your wallet. No automatic network switching.');const [a,b,ra,rb]=await Promise.all([call(C.amm,SEL.tokenA),call(C.amm,SEL.tokenB),call(C.amm,SEL.reserveA),call(C.amm,SEL.reserveB)]);if(g!==generation)return;const address=n=>'0x'+n.toString(16).padStart(40,'0');if(!same(address(a),C.yst)||!same(address(b),C.usdt))throw Error('AMM token pair mismatch — STOP');if(ra<=0n||rb<=0n)throw Error('Pool has no liquidity');const n=parseAmount(el('amount').value.trim());
+// Preliminary constant-product quote assuming 0.30% fee; verify against deployed contract before enabling trading.
+const out=n*997n*ra/(rb*1000n+n*997n),min=out*995n/1000n;if(out<=0n)throw Error('Amount too small for a meaningful quote');el('receive').textContent=format(out)+' YST';el('minimum').textContent=format(min)+' YST';el('reserves').textContent=format(ra)+' YST / '+format(rb)+' USDT';if(account){const [u,y]=await Promise.all([call(C.usdt,SEL.balanceOf+word(account)),call(C.yst,SEL.balanceOf+word(account))]);if(g!==generation)return;el('usdtBalance').textContent=format(u)+' USDT';el('ystBalance').textContent=format(y)+' YST'}if(g===generation)status('Read-only preview updated. Trading remains disabled.');}catch(e){if(g===generation){clearQuote();status(e?.message||String(e),true)}}}
+async function connect(){try{const accounts=await rpc('eth_requestAccounts');account=accounts?.[0]||null;el('wallet').textContent=account||'Not connected';await refresh()}catch(e){status(e?.message||String(e),true)}}
+el('connect').addEventListener('click',connect);el('refresh').addEventListener('click',refresh);el('amount').addEventListener('input',()=>{clearQuote();status('Amount changed. Refresh quote to read current reserves.')});
+if(window.ethereum?.on){window.ethereum.on('accountsChanged',a=>{account=a?.[0]||null;el('wallet').textContent=account||'Not connected';void refresh()});window.ethereum.on('chainChanged',()=>{account=null;el('wallet').textContent='Reconnect required';void refresh()})}
+</script>
+</body></html>
