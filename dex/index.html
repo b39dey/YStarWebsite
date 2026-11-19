@@ -19,15 +19,34 @@ function walletLabel(){ $("connect").textContent=connected?"Connected · "+conne
 async function rpc(method,params=[]){if(!window.ethereum?.request)throw Error("MetaMask provider not found");return window.ethereum.request({method,params})}
 async function call(to,data){const r=await rpc("eth_call",[{to,data},"latest"]);if(!/^0x[0-9a-fA-F]+$/.test(r)||r==="0x")throw Error("Invalid contract response");return BigInt(r)}
 async function load(g){reset();const amountText=$("amount").value.trim();if(!connected)throw Error("Connect wallet to see quote");const amount=parse(amountText);const wallet=connected;
-if(!same(await rpc("eth_chainId"),CONFIG.chainId))throw Error("Select BSC Mainnet (56)");
-const accounts=await rpc("eth_accounts");if(!accounts.length||!same(accounts[0],wallet))throw Error("Wallet changed; reconnect");
+if(!same(await rpc("eth_chainId"),CONFIG.chainId)){invalidate("Select BSC Mainnet (56) — reconnect");return;}
+const accounts=await rpc("eth_accounts");if(!accounts.length||!same(accounts[0],wallet)){invalidate("Wallet changed — reconnect");return;}
 const [a,b,rA,rB,usdt,yst,allowance,bnb]=await Promise.all([call(CONFIG.amm,SEL.tokenA),call(CONFIG.amm,SEL.tokenB),call(CONFIG.amm,SEL.reserveA),call(CONFIG.amm,SEL.reserveB),call(CONFIG.usdt,SEL.balanceOf+word(wallet)),call(CONFIG.yst,SEL.balanceOf+word(wallet)),call(CONFIG.usdt,SEL.allowance+word(wallet)+word(CONFIG.amm)),rpc("eth_getBalance",[wallet,"latest"])]);
 if(g!==generation||amountText!==$("amount").value.trim()||!same(connected,wallet))return;
+const [finalChain,finalAccounts]=await Promise.all([rpc("eth_chainId"),rpc("eth_accounts")]);
+if(g!==generation)return;
+if(!same(finalChain,CONFIG.chainId)||!finalAccounts?.length||!same(finalAccounts[0],wallet)){invalidate("Wallet/network changed — reconnect");return;}
 const addr=n=>"0x"+n.toString(16).padStart(40,"0");if(!same(addr(a),CONFIG.yst)||!same(addr(b),CONFIG.usdt))throw Error("AMM token mismatch");if(rA<=0n||rB<=0n)throw Error("No liquidity");
 const out=amount*997n*rA/(rB*1000n+amount*997n),min=out*995n/1000n,ideal=amount*rA/rB,impact=ideal>0n?(ideal-out)*10000n/ideal:0n;
 $("receive").textContent=fmt(out).replace(/^(\d+)(?:\.(\d+))?$/,(_,a,b)=>Number(a).toLocaleString("en-US")+(b?"."+b.slice(0,6).replace(/0+$/,""):""));$("minimum").textContent="Minimum received (0.5% slippage): "+fmt(min).replace(/^(\d+)(?:\.(\d+))?$/,(_,a,b)=>Number(a).toLocaleString("en-US")+(b?"."+b.slice(0,6).replace(/0+$/,""):""))+" YST";$("price").textContent=fmt(CONFIG.base*1000000n*rB/rA).replace(/^(\d+)(?:\.(\d+))?$/,(_,a,b)=>{const x=BigInt(a);return (x/1000000n).toString()+"."+(x%1000000n).toString().padStart(6,"0")})+" USDT / YST";const compact=(n,d)=>{const [a,b=""]=fmt(n).split(".");return BigInt(a).toLocaleString("en-US")+(d&&b?"."+b.slice(0,d).replace(/0+$/,""):"")};$("liquidity").replaceChildren();for(const [num,unit] of [[compact(rA,2),"YST"],[compact(rB,4),"USDT"]]){const line=document.createElement("span");line.className="reserve-line";const val=document.createElement("span");val.className="reserve-number";val.textContent=num;const label=document.createElement("span");label.className="reserve-unit";label.textContent=" "+unit;line.append(val,label);$("liquidity").append(line)}$("impact").textContent=(impact/100n)+"."+(impact%100n).toString().padStart(2,"0")+"%";$("usdt-balance").textContent="USDT balance: "+fmt(usdt);$("yst-balance").textContent="YST balance: "+fmt(yst);$("allowance").textContent="USDT allowance: "+fmt(allowance);$("bnb-balance").textContent="BNB balance: "+fmt(BigInt(bnb));status((usdt<amount?"Insufficient USDT · ":"")+"Read-only quote · Trading OFF · Assumed 0.3% fee not yet verified")}
 async function update(){const g=++generation;try{await load(g)}catch(e){if(g===generation){reset();status(e.message||String(e))}}}
 $("amount").addEventListener("input",()=>{reset();void update()});
 $("connect").addEventListener("click",async()=>{const g=++generation;try{const a=await rpc("eth_requestAccounts");if(g!==generation)return;if(!a?.length)throw Error("No wallet selected");if(!same(await rpc("eth_chainId"),CONFIG.chainId))throw Error("Select BSC Mainnet (56)");connected=a[0];$("wallet").textContent="Wallet: "+connected;walletLabel();await update()}catch(e){if(g===generation){connected=null;walletLabel();$("wallet").textContent="Wallet: Not connected";reset();status(e.message||String(e))}}});
-walletLabel();if(window.ethereum?.on)for(const event of ["accountsChanged","chainChanged"])window.ethereum.on(event,()=>{++generation;connected=null;walletLabel();$("wallet").textContent="Wallet: Reconnect required";reset();status("Wallet/network changed — reconnect")});
+function invalidate(reason){++generation;connected=null;walletLabel();$("wallet").textContent="Wallet: Reconnect required";reset();status(reason)}
+let verifying=false;
+async function verifyConnection(){
+ if(!connected||verifying)return;
+ verifying=true;
+ const snapshot=connected;
+ try{
+  const [chain,accounts]=await Promise.all([rpc("eth_chainId"),rpc("eth_accounts")]);
+  if(!same(chain,CONFIG.chainId)||!accounts?.length||!same(accounts[0],snapshot)){
+   if(same(connected,snapshot))invalidate("Wallet/network changed — reconnect");
+  }
+ }catch(e){if(same(connected,snapshot))invalidate("Unable to verify wallet/network — reconnect")}
+ finally{verifying=false}
+}
+document.addEventListener("visibilitychange",()=>{if(!document.hidden)void verifyConnection()});
+window.addEventListener("focus",()=>{void verifyConnection()});
+walletLabel();if(window.ethereum?.on)for(const event of ["accountsChanged","chainChanged"])window.ethereum.on(event,()=>invalidate("Wallet/network changed — reconnect"));
 </script></body></html>
