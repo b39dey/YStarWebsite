@@ -42,11 +42,16 @@ async function verifyConnection(){
   const [chain,accounts]=await Promise.all([rpc("eth_chainId"),rpc("eth_accounts")]);
   if(!same(chain,CONFIG.chainId)||!accounts?.length||!same(accounts[0],snapshot)){
    if(same(connected,snapshot))invalidate("Wallet/network changed — reconnect");
+  }else if(same(connected,snapshot)){
+   // Returning to the tab must not leave an old pool quote on screen.
+   reset();
+   status("Refreshing read-only quote from BSC Mainnet…");
+   await update();
   }
  }catch(e){if(same(connected,snapshot))invalidate("Unable to verify wallet/network — reconnect")}
  finally{verifying=false}
 }
 document.addEventListener("visibilitychange",()=>{if(!document.hidden)void verifyConnection()});
 window.addEventListener("focus",()=>{void verifyConnection()});
-walletLabel();if(window.ethereum?.on)for(const event of ["accountsChanged","chainChanged"])window.ethereum.on(event,()=>invalidate("Wallet/network changed — reconnect"));
+walletLabel();if(window.ethereum?.on){for(const event of ["accountsChanged","chainChanged"])window.ethereum.on(event,()=>invalidate("Wallet/network changed — reconnect"));window.ethereum.on("disconnect",()=>invalidate("Wallet provider disconnected — reconnect"));}
 </script></body></html>
