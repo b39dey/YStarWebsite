@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="th"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>YStar Phase 9 — Browser Atomic Lock Test</title>
+<style>body{font:16px system-ui;background:#0d1424;color:#edf3ff;max-width:740px;margin:36px auto;padding:0 18px}button{padding:12px 18px;border:0;border-radius:9px;background:#58b8fa;color:#091525;font-weight:700;cursor:pointer;margin:5px}button:disabled{opacity:.4}pre{white-space:pre-wrap;word-break:break-word;background:#17253b;padding:18px;border-radius:12px;min-height:160px}.note{color:#b3c8dd}strong{color:#8de9ad}</style></head>
+<body><h2>YStar DEX — Browser Cross-tab Lock Test</h2>
+<p class="note">ทดสอบ Web Locks + localStorage จริงใน 2 แท็บ (origin เดียวกัน) ใช้ข้อมูลจำลองทั้งหมด ไม่มี Wallet/RPC/ธุรกรรม</p>
+<p><strong>วิธีทดสอบ:</strong> เปิดหน้านี้ 2 แท็บ กด Start ที่แท็บ A แล้วภายใน 8 วินาทีกด Start ที่แท็บ B จากนั้นดูผลทั้งสองแท็บ</p>
+<button id="start">Start test in this tab</button><button id="inspect">Inspect shared test lock</button><button id="reset">Reset TEST DATA only</button>
+<pre id="log"></pre>
+<script type="module">
+import {withAtomicIntent} from "./public-atomic-lock.mjs";
+import {scopeKey,readIntent} from "./public-safety.mjs";
+const wallet="0x1111111111111111111111111111111111111111";
+const amm="0x17dAc8A164Ce434fE36A2D6029Bf4431a22397e2";
+const namespace="ystar-browser-atomic-test-only:";
+const quote=()=>{const now=Date.now();return {chainId:56,amm,wallet,observedAtMs:now,deadlineSec:Math.floor(now/1000)+300,amountIn:1n,quotedOut:2n,minimumOut:1n,blockNumber:123n}};
+const storage={getItem:key=>localStorage.getItem(namespace+key),setItem:(key,value)=>localStorage.setItem(namespace+key,value)};
+const log=document.querySelector("#log");const button=document.querySelector("#start");
+function write(s){log.textContent+=new Date().toLocaleTimeString()+"  "+s+"\n"}
+function inspect(){try{const r=readIntent(storage,scopeKey(quote()));write(r?"Shared intent: "+r.state+" / "+r.id.slice(0,14)+"...":"Shared intent: EMPTY")}catch(e){write("ERROR "+e.message)}}
+function testId(){const bytes=new Uint8Array(32);crypto.getRandomValues(bytes);return "0x"+Array.from(bytes,b=>b.toString(16).padStart(2,"0")).join("")}
+button.addEventListener("click",async()=>{
+button.disabled=true;const q=quote();write("REQUEST lock; waiting for exclusive browser lock...");
+try{const result=await withAtomicIntent({locks:navigator.locks,storage,quote:q,intentId:testId(),nowMs:q.observedAtMs,onAcquired:async record=>{
+write("PASS: acquired and persisted "+record.id.slice(0,14)+"...");
+write("Holding browser lock for 8 seconds...");
+await new Promise(resolve=>setTimeout(resolve,8000));
+write("Browser lock released; persistent intent stays LOCKED");
+return "PASS: ONLY THIS TAB CREATED INTENT";
+}});
+write(result);
+}catch(e){if(e.message==="INTENT_ALREADY_LOCKED")write("PASS: duplicate rejected (INTENT_ALREADY_LOCKED)");else write("ERROR: "+e.message)}
+finally{button.disabled=false;inspect()}
+});
+document.querySelector("#inspect").addEventListener("click",inspect);
+document.querySelector("#reset").addEventListener("click",()=>{
+if(!confirm("Clear ONLY isolated browser test intent? Never do this while either tab is running."))return;
+localStorage.removeItem(namespace+scopeKey(quote()));write("Test namespace reset. Refresh BOTH tabs before another run.");
+});
+window.addEventListener("storage",event=>{if(event.key===namespace+scopeKey(quote()))write("Cross-tab storage change detected")});
+write("Origin: "+location.origin);
+write("Web Locks: "+(navigator.locks?.request?"available":"UNAVAILABLE (FAIL CLOSED)"));
+write("Use the same localhost origin in both tabs.");
+inspect();
+</script></body></html>
