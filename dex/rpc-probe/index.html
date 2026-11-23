@@ -1,0 +1,116 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src https://56.rpc.thirdweb.com; script-src 'sha256-6eujG7CTB1X81Xg+bbQmr7ia46lV4GPjJ6JNMZqA2/A='; base-uri 'none'; form-action 'none'">
+<title>YStar DEX - Read-only RPC Check</title>
+</head>
+<body>
+<main>
+<h1>Read-only RPC Check</h1>
+<p id="mode"></p>
+<dl><dt>Browser origin</dt><dd id="origin"></dd><dt>RPC endpoint</dt><dd id="endpoint"></dd></dl>
+<button id="run" type="button" disabled>Run Read-only Check</button>
+<dl aria-live="polite">
+<dt>Chain ID</dt><dd id="chain">Not checked</dd>
+<dt>Native finalized block</dt><dd id="finalized">Not checked</dd>
+<dt>Overall</dt><dd id="overall">Not checked</dd>
+</dl>
+</main>
+<script>"use strict";
+const endpoint = "https://56.rpc.thirdweb.com";
+const productionOrigin = "https://ystar-token.com";
+const origin = window.location.origin;
+const local = window.location.protocol === "http:" &&
+  ["localhost", "127.0.0.1", "[::1]"].includes(window.location.hostname);
+const production = origin === productionOrigin;
+const allowedOrigin = local || production;
+const button = document.getElementById("run");
+const byId = id => document.getElementById(id);
+byId("origin").textContent = origin;
+byId("endpoint").textContent = endpoint;
+byId("mode").textContent = production ? "PRODUCTION-ORIGIN TEST"
+  : local ? "LOCAL TEST (does not establish production CORS)" : "UNSUPPORTED ORIGIN";
+button.disabled = !allowedOrigin;
+if (!allowedOrigin) byId("overall").textContent = "FAIL - Serve on local HTTP or the exact production origin.";
+
+const checks = Object.freeze([
+  {id: 1, method: "eth_chainId", params: [], output: "chain",
+    valid: result => result === "0x38", format: () => "Chain ID 56 (0x38)."},
+  {id: 2, method: "eth_getBlockByNumber", params: ["finalized", false], output: "finalized",
+    valid: result => result !== null && typeof result === "object" && !Array.isArray(result) &&
+      typeof result.number === "string" && /^0x(?:0|[1-9a-f][0-9a-f]{0,63})$/i.test(result.number) &&
+      typeof result.hash === "string" && /^0x[0-9a-f]{64}$/i.test(result.hash) &&
+      !/^0x0{64}$/i.test(result.hash),
+    format: result => "Finalized block " + result.number + ", hash " + result.hash + "."}
+]);
+
+async function check({id, method, params, output, valid, format}) {
+  const target = byId(output);
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 10000);
+  let transport = "HTTP unavailable. CORS or network failure; browser fetch cannot distinguish them.";
+  function fail(detail) {
+    target.textContent = "FAIL - " + transport + " " + detail;
+    return false;
+  }
+  try {
+    const response = await fetch(endpoint, {
+      method: "POST", mode: "cors", credentials: "omit", redirect: "error",
+      cache: "no-store", referrerPolicy: "no-referrer",
+      headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({jsonrpc: "2.0", id, method, params}),
+      signal: controller.signal
+    });
+    if (response.type !== "cors") return fail("No readable cross-origin response.");
+    transport = "CORS readable. HTTP " + response.status + ".";
+    if (!response.ok) return fail("HTTP request failed.");
+    let body;
+    try {
+      body = await response.json();
+    } catch {
+      return fail(controller.signal.aborted ? "Timed out while reading the response." : "Invalid JSON response.");
+    }
+    if (body === null || typeof body !== "object" || Array.isArray(body) ||
+        body.jsonrpc !== "2.0" || body.id !== id) return fail("Invalid JSON-RPC envelope.");
+    if (Object.hasOwn(body, "error")) {
+      if (Object.hasOwn(body, "result") || !Number.isInteger(body.error?.code) ||
+          typeof body.error?.message !== "string") return fail("Invalid JSON-RPC error envelope.");
+      return fail("JSON-RPC error code " + body.error.code + ".");
+    }
+    if (!Object.hasOwn(body, "result") || !valid(body.result)) {
+      return fail(id === 1 ? "Expected chain ID 0x38." : "Missing or malformed finalized block.");
+    }
+    target.textContent = "PASS - " + transport + " " + format(body.result);
+    return true;
+  } catch {
+    if (controller.signal.aborted) {
+      target.textContent = "FAIL - Timed out after 10 seconds. HTTP/CORS result unavailable.";
+      return false;
+    }
+    return fail("No readable response.");
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
+let running = false;
+button.addEventListener("click", async () => {
+  if (running || !allowedOrigin) return;
+  running = true;
+  button.disabled = true;
+  byId("overall").textContent = "Checking...";
+  for (const item of checks) byId(item.output).textContent = "Checking...";
+  try {
+    const results = await Promise.all(checks.map(check));
+    byId("overall").textContent = results.every(Boolean) ? "PASS" : "FAIL";
+  } catch {
+    byId("overall").textContent = "FAIL - Probe could not complete.";
+  } finally {
+    running = false;
+    button.disabled = false;
+  }
+});</script>
+</body>
+</html>
