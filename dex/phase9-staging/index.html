@@ -1,0 +1,1414 @@
+﻿
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>YStar DEX - Phase 9 Integrated Dry Run (NO TX)</title>
+<style>
+  body {
+    font-family: Arial, sans-serif;
+    background: #101827;
+    color: white;
+    max-width: 540px;
+    margin: 30px auto;
+    padding: 16px;
+  }
+  .card {
+    background: #1e293b;
+    border-radius: 16px;
+    padding: 24px;
+  }
+  h1 { margin-bottom: 4px; }
+  .subtitle { color: #fbbf24; }
+  .info {
+    margin: 14px 0;
+    line-height: 1.6;
+    overflow-wrap: anywhere;
+  }
+  button {
+    width: 100%;
+    padding: 15px;
+    border: 0;
+    border-radius: 9px;
+    background: #38bdf8;
+    font-size: 16px;
+    font-weight: bold;
+    cursor: pointer;
+    margin: 10px 0;
+  }
+  button:disabled {
+    opacity: 0.4;
+    cursor: not-allowed;
+  }
+  .success { color: #4ade80; }
+  .warning { color: #fbbf24; }
+  .error { color: #f87171; }
+  hr { border: 1px solid #334155; }
+</style>
+</head>
+
+<body>
+<div class="card">
+  <h1>YStar DEX</h1>
+  <p class="subtitle">PHASE 9 INTEGRATION REVIEW - READ ONLY / NO TRANSACTIONS</p>
+
+  <div class="info warning">INTEGRATION REVIEW ONLY. This file has no transaction-sending code. Never use as production trading UI.</div>
+  <div class="info" id="phase9State">Phase 9 intent: checking...</div>
+  <button id="connectBtn" disabled>Legacy wallet connection disabled</button>
+  <label for="realWalletChoice">Wallet for read-only inspection</label>
+  <select id="realWalletChoice">
+    <option value="">Select a wallet</option>
+    <option value="fallback">Legacy injected wallet fallback</option>
+  </select>
+  <button id="realConnectBtn" disabled>Connect Wallet</button>
+  <button id="realRefreshBtn" disabled>Refresh wallet session</button>
+  <div class="info" id="realWalletStatus" aria-live="polite">No wallet selected.</div>
+  <div class="info" id="realIntentStatus" aria-live="polite"></div>
+  <button id="realRecoverBtn" disabled>Verify saved receipt</button>
+  <div class="info" id="realRecoveryStatus" aria-live="polite"></div>
+  <div class="info" id="realReceiptObservation" aria-live="polite"></div>
+  <pre class="info" id="liveHashEvidence" style="white-space:pre-wrap;overflow-wrap:anywhere" aria-live="polite" hidden></pre>
+
+  <div class="info" id="wallet">Wallet: Not connected</div>
+  <div class="info" id="status">Status: Waiting</div>
+  <div class="info" id="txLink"></div>
+  <hr>
+
+  <h2>Read-only transaction preview</h2>
+  <label for="realQuoteDirection">Swap direction</label>
+  <select id="realQuoteDirection">
+    <option value="USDT_TO_YST">USDT → YST</option>
+    <option value="YST_TO_USDT">YST → USDT</option>
+  </select>
+  <label for="realQuoteAmount">Input amount</label>
+  <input id="realQuoteAmount" inputmode="decimal" autocomplete="off">
+  <button id="realQuoteBtn" disabled>Prepare read-only preview</button>
+  <p class="info">Compare the full sender shown in the preview with the account you intend to use.</p>
+  <div class="info" id="realQuoteStatus" aria-live="polite" style="white-space: pre-wrap">Prepare a fresh quote.</div>
+
+  <div hidden>
+  <div class="info">Network: BSC Mainnet (56)</div>
+  <div class="info">Pay: <b>0.10 USDT</b></div>
+  <div class="info" id="receive">Expected Receive: -</div>
+  <div class="info" id="minimum">Minimum Receive: -</div>
+  <div class="info">Slippage: 0.5%</div>
+  <div class="info">Deadline: 10 minutes</div>
+
+  <hr>
+
+  <div class="info" id="reserves">Reserves: -</div>
+  <div class="info" id="balance">USDT Balance: -</div>
+  <div class="info" id="ystBalance">YST Balance: -</div>
+  <div class="info" id="receivedActual">Last Swap Received: -</div>
+  <div class="info" id="allowance">USDT Allowance: -</div>
+  <div class="info" id="bnb">BNB Balance: -</div>
+  <div class="info" id="gas">Estimated Gas: -</div>
+  </div>
+
+  <button id="approveBtn" disabled>Approve</button>
+  <div class="info warning" id="approvalNote">Public approvals and swaps are disabled.</div>
+
+  <button id="swapBtn" disabled>Swap</button>
+
+
+  <hr>
+  <h2>Phase 9: Integrated Safety Dry Run (MOCK ONLY)</h2>
+  <p class="warning">Uses actual safety modules, a dummy wallet, isolated test storage and a simulated RPC. No wallet transaction request. Public trading remains OFF.</p>
+  <label for="mockWalletChoice">Mock wallet</label>
+  <select id="mockWalletChoice">
+    <option value="">Select a mock wallet</option>
+    <option value="fallback">Mock fallback wallet</option>
+  </select>
+  <div class="info" id="mockWalletStatus" aria-live="polite">No mock wallet selected.</div>
+  <button id="mockWalletRefresh" disabled>Refresh mock session</button>
+  <button id="mockAccountChange" disabled>Change mock account</button>
+  <button id="mockChainChange" disabled>Switch mock chain</button>
+  <button id="mockDisconnect" disabled>Disconnect mock wallet</button>
+  <label for="dryDirection">Mock swap direction</label>
+  <select id="dryDirection">
+    <option value="USDT_TO_YST">USDT → YST</option>
+    <option value="YST_TO_USDT">YST → USDT</option>
+  </select>
+  <div class="info" id="dryQuote" aria-live="polite"></div>
+  <div class="info" id="dryState">Dry run: not started</div>
+  <button id="dryRunBtn" disabled>Run mock swap</button>
+  <button id="dryApprovalBtn" disabled>Run mock approval</button>
+  <button id="dryRecoverBtn" disabled>Verify persisted mock receipt</button>
+  <button id="dryRefreshBtn">Read persisted dry-run intent</button>
+  <p class="info">Both mock operations share one dummy wallet and a test-only storage namespace. Persisted intents stay locked for review.</p>
+
+  <p class="warning">
+    Wallet execution is disabled on this development page.
+  </p>
+</div>
+
+<script type="module">
+"use strict";
+import {scopeKey, readIntent, isVerifiedTerminalIntent, MAX_QUOTE_AGE_MS, validateQuote} from "./public-safety.mjs";
+import {prepareReadOnlyQuote, formatPreviewAmount, recheckReviewedQuote} from "./public-readonly-quote.mjs";
+import {runOfflineTransactionBoundary, runRevalidatedOfflineTransactionBoundary, issueSyntheticFirstUseAuthorization} from "./public-transaction-boundary.mjs";
+import {SINGLE_SOURCE_NATIVE_FINALITY, inspectCanonicalReceipt, pinFinalityPolicy, requireFinalitySources, verifyApprovalReceipt, verifyOnChainReceipt, recheckTerminalReceipt} from "./public-receipt-verifier.mjs";
+import {createWalletDiscovery} from "./public-wallet-discovery.mjs";
+import {createWalletSession} from "./public-wallet-session.mjs";
+
+// BSC Mainnet only. This page NEVER approves tokens or sends a transaction automatically.
+const TRADING_ENABLED = false; // Phase 9 hard NO-GO; do not enable
+const CONFIG = Object.freeze({
+  wallet: "0x317F835aF5C5eC9089d765884DA88354f8c8680c",
+  amm: "0x17dAc8A164Ce434fE36A2D6029Bf4431a22397e2",
+  yst: "0x2E9803942dAf364a803f4C01D3e49D431dDf1421",
+  usdt: "0x55d398326f99059fF775485246999027B3197955",
+  chainId: "0x38",
+  base: 10n ** 18n,
+  amountIn: 10n ** 17n,
+  deadlineSeconds: 600n,
+  transferTopic: "0xddf252ad1be2c89b69c2b068fc378daa952ba7f163c4a11628f55a4df523b3ef"
+});
+const SEL = Object.freeze({
+  tokenA: "0x0fc63d10", tokenB: "0x5f64b55b",
+  reserveA: "0xdc5fa6c5", reserveB: "0x19e36f3b",
+  balanceOf: "0x70a08231", allowance: "0xdd62ed3e", approve: "0x095ea7b3"
+});
+const $ = id => document.getElementById(id);
+const same = (a, b) => String(a).toLowerCase() === String(b).toLowerCase();
+const word = value => String(value).replace(/^0x/i, "").padStart(64, "0");
+const hex = n => "0x" + n.toString(16);
+const storageKey = "ystar:swap:v2:56:" + CONFIG.wallet.toLowerCase();
+let connected = null;
+let busy = false;
+let pendingHash = null;
+let quote = null;
+let session = 0;
+let monitoring = false;
+let approvalPending = false;
+let approvalNeeded = false;
+const approvalStorageKey = "ystar:approval:v1:56:" + CONFIG.wallet.toLowerCase();
+
+function format(value) {
+  const whole = value / CONFIG.base;
+  const fractional = (value % CONFIG.base).toString().padStart(18, "0").replace(/0+$/, "");
+  return whole + (fractional ? "." + fractional : "");
+}
+function status(message, type = "warning") {
+  $("status").textContent = "Status: " + message;
+  $("status").className = "info " + type;
+}
+function setTxLink(hash) {
+  const target = $("txLink");
+  target.replaceChildren();
+  if (!/^0x[0-9a-fA-F]{64}$/.test(hash || "")) return;
+  const anchor = document.createElement("a");
+  anchor.href = "https://bscscan.com/tx/" + hash;
+  anchor.textContent = "View Transaction on BscScan";
+  anchor.target = "_blank";
+  anchor.rel = "noopener noreferrer";
+  anchor.style.color = "#38bdf8";
+  target.append(anchor);
+}
+function savedRecord() {
+  try {
+    const r = JSON.parse(localStorage.getItem(storageKey) || "null");
+    return r && /^0x[0-9a-fA-F]{64}$/.test(r.hash) &&
+      ["pending", "confirmed", "failed", "unknown"].includes(r.state) ? r : null;
+  } catch { return null; }
+}
+function saveRecord(hash, state, received = null) {
+  try { localStorage.setItem(storageKey, JSON.stringify({hash, state, received})); }
+  catch { status("Browser storage unavailable: save the TX hash before closing", "warning"); }
+}
+function lockButtons() {
+  $("swapBtn").disabled = !TRADING_ENABLED || busy || !!pendingHash || approvalPending || approvalNeeded || !connected || !quote;
+  $("approveBtn").disabled = !TRADING_ENABLED || busy || !!pendingHash || approvalPending || !approvalNeeded || !connected || !quote;
+  $("connectBtn").disabled = true;
+}
+async function rpc(method, params = []) {
+  if (!window.ethereum) throw new Error("MetaMask / EIP-1193 wallet not detected");
+  return window.ethereum.request({method, params});
+}
+async function call(to, data) {
+  const result = await rpc("eth_call", [{to, data}, "latest"]);
+  if (!result || result === "0x") throw new Error("Empty contract response");
+  return result;
+}
+async function checkWallet() {
+  if (!same(await rpc("eth_chainId"), CONFIG.chainId)) throw new Error("Wrong network: select BSC Mainnet (56)");
+  const accounts = await rpc("eth_accounts");
+  if (!accounts?.length || !same(accounts[0], CONFIG.wallet)) throw new Error("Connect the authorized Trezor wallet");
+  return accounts[0];
+}
+async function verifyPair() {
+  const a = "0x" + (await call(CONFIG.amm, SEL.tokenA)).slice(-40);
+  const b = "0x" + (await call(CONFIG.amm, SEL.tokenB)).slice(-40);
+  if (!same(a, CONFIG.yst) || !same(b, CONFIG.usdt)) throw new Error("AMM token mismatch - STOP");
+}
+async function readBalances(wallet) {
+  const [usdt, yst, allowance, bnb] = await Promise.all([
+    call(CONFIG.usdt, SEL.balanceOf + word(wallet)),
+    call(CONFIG.yst, SEL.balanceOf + word(wallet)),
+    call(CONFIG.usdt, SEL.allowance + word(wallet) + word(CONFIG.amm)),
+    rpc("eth_getBalance", [wallet, "latest"])
+  ]);
+  $("balance").textContent = "USDT Balance: " + format(BigInt(usdt));
+  $("ystBalance").textContent = "YST Balance: " + format(BigInt(yst));
+  $("allowance").textContent = "USDT Allowance: " + format(BigInt(allowance));
+  $("bnb").textContent = "BNB Balance: " + format(BigInt(bnb));
+  return {usdt: BigInt(usdt), allowance: BigInt(allowance), bnb: BigInt(bnb)};
+}
+async function refresh() {
+  quote = null;
+  approvalNeeded = false;
+  lockButtons();
+  const generation = session;
+  const wallet = await checkWallet();
+  await verifyPair();
+  const [a, b] = await Promise.all([
+    call(CONFIG.amm, SEL.reserveA), call(CONFIG.amm, SEL.reserveB)
+  ]);
+  const reserveA = BigInt(a), reserveB = BigInt(b);
+  if (reserveA <= 0n || reserveB <= 0n) throw new Error("No liquidity");
+  const funds = await readBalances(wallet);
+  const out = CONFIG.amountIn * 997n * reserveA / (reserveB * 1000n + CONFIG.amountIn * 997n);
+  const minOut = out * 995n / 1000n;
+  $("wallet").textContent = "Wallet: " + wallet;
+  $("reserves").textContent = "Reserves: " + format(reserveA) + " YST / " + format(reserveB) + " USDT";
+  $("receive").textContent = "Expected Receive: " + format(out) + " YST";
+  $("minimum").textContent = "Minimum Receive: " + format(minOut) + " YST";
+  if (funds.usdt < CONFIG.amountIn) throw new Error("Insufficient USDT");
+  approvalNeeded = funds.allowance < CONFIG.amountIn;
+  if (funds.bnb <= 0n) throw new Error("No BNB for gas");
+  if (generation !== session) throw new Error("Wallet/network changed during refresh");
+  connected = wallet;
+  quote = {out, minOut};
+  if (!pendingHash && !approvalPending) {
+    if (!TRADING_ENABLED) status("Trading disabled - Read-only mode (Phase 8 NO-GO)", "warning");
+    else status(approvalNeeded ? "Approval required: approve exactly 0.10 USDT before swapping" : "Checks passed - ready for simulation", approvalNeeded ? "warning" : "success");
+  }
+  lockButtons();
+}
+async function swapData(amountIn, minOut, deadline) {
+  const signature = "swapBForA(uint256,uint256,uint256)";
+  const encoded = "0x" + Array.from(new TextEncoder().encode(signature), b => b.toString(16).padStart(2,"0")).join("");
+  const selector = (await rpc("web3_sha3", [encoded])).slice(0, 10);
+  if (!/^0x[0-9a-fA-F]{8}$/.test(selector)) throw new Error("Invalid swap selector");
+  return selector + word(hex(amountIn)) + word(hex(minOut)) + word(hex(deadline));
+}
+function receiptReceived(receipt, wallet) {
+  let total = 0n;
+  for (const log of receipt.logs || []) {
+    if (!same(log.address, CONFIG.yst) || !same(log.topics?.[0], CONFIG.transferTopic) || log.topics.length !== 3) continue;
+    const to = "0x" + log.topics[2].slice(-40);
+    if (same(to, wallet)) total += BigInt(log.data);
+  }
+  return total;
+}
+async function monitor(hash, wallet) {
+  void hash; void wallet;
+  status("Legacy receipt monitor disabled in Phase 9 review; verified recovery integration pending.", "warning");
+}
+async function connect() {
+  if (busy) return;
+  busy = true; lockButtons();
+  try {
+    await rpc("eth_requestAccounts", []);
+    const wallet = await checkWallet();
+    const previous = savedRecord();
+    if (previous) {
+      setTxLink(previous.hash);
+      if (previous.state === "confirmed" && previous.received !== null) {
+        $("receivedActual").textContent = "Last Swap Received: " + format(BigInt(previous.received)) + " YST";
+      }
+      if (previous.state === "pending" || previous.state === "unknown") pendingHash = previous.hash;
+    }
+    await refresh();
+    const approvalHash = localStorage.getItem(approvalStorageKey);
+    if (approvalHash && /^0x[0-9a-fA-F]{64}$/.test(approvalHash)) {
+      approvalPending = true;
+      status("Checking previous approval - no new transaction allowed");
+      inspectPhase9Intent(); // legacy monitor deliberately disabled
+    }
+    if (pendingHash) {
+      status("Checking previous submitted TX - no new swap allowed");
+      inspectPhase9Intent(); // legacy monitor deliberately disabled
+    }
+  } catch (e) { connected = null; quote = null; status(e.message || String(e), "error"); }
+  finally { busy = false; lockButtons(); }
+}
+async function swap() {
+  status("Phase 9 integration review: SWAP BLOCKED. No wallet request is implemented.", "warning");
+}
+async function monitorApproval(hash, wallet) {
+  void hash; void wallet;
+  status("Legacy approval monitor disabled in Phase 9 review; verified approval recovery pending.", "warning");
+}
+async function approve() {
+  status("Phase 9 integration review: APPROVAL BLOCKED. No wallet request is implemented.", "warning");
+}
+
+function inspectPhase9Intent() {
+  const target = $("phase9State");
+  try {
+    const key = scopeKey({chainId: 56, amm: CONFIG.amm, wallet: CONFIG.wallet});
+    const intent = readIntent(localStorage, key);
+    if (!intent) {
+      target.textContent = "Phase 9 intent: none found in this browser origin (not proof of global absence)";
+    } else {
+      target.textContent = "Phase 9 persisted intent: " + String(intent.state || "INVALID") +
+        " | ID " + String(intent.id || "-") +
+        " | hash " + String(intent.txHash || "UNKNOWN / NOT RECORDED") +
+        " | NO RETRY AUTHORIZED";
+    }
+  } catch (e) {
+    target.textContent = "Phase 9 storage inspection failed (FAIL CLOSED): " + (e.message || String(e));
+  }
+}
+// Strictly isolated mock: no eth_sendTransaction, no approval, no real wallet.
+const DRY_PREFIX = "ystar-phase9-integrated-dryrun-only:";
+const DRY_SCOPE = Object.freeze({
+  chainId: 56, amm: CONFIG.amm.toLowerCase(), wallet: "0x" + "1".repeat(40)
+});
+const DRY_KEY = scopeKey(DRY_SCOPE);
+const DRY_DATA = "0x12345678"; // independently fixed test calldata, NOT from RPC
+const DRY_HASH = "0x" + "b".repeat(64);
+const DRY_BLOCK_HASH = "0x" + "c".repeat(64);
+const DRY_AMOUNT = 1n;
+const DRY_MINIMUM = 1n;
+const DRY_DEADLINE_SECONDS = 600;
+const DRY_TOKENS = Object.freeze({USDT: CONFIG.usdt.toLowerCase(), YST: CONFIG.yst.toLowerCase()});
+const DRY_ROUTES = Object.freeze({
+  USDT_TO_YST: {input: "USDT", output: "YST", selector: "0x8e6bcbf0"},
+  YST_TO_USDT: {input: "YST", output: "USDT", selector: "0xc8f9edd8"}
+});
+const LEGACY_DRY_TRANSACTIONS = Object.freeze({
+  SWAP: Object.freeze({destination: DRY_SCOPE.amm, expectedCalldata: DRY_DATA}),
+  APPROVAL: Object.freeze({
+    destination: DRY_TOKENS.USDT,
+    expectedCalldata: "0x095ea7b3" + word(DRY_SCOPE.amm) + word(hex(DRY_AMOUNT)),
+    token: DRY_TOKENS.USDT, spender: DRY_SCOPE.amm, amount: DRY_AMOUNT.toString()
+  })
+});
+const dryStorage = {
+  getItem: key => localStorage.getItem(DRY_PREFIX + key),
+  setItem: (key, value) => localStorage.setItem(DRY_PREFIX + key, value)
+};
+
+// The selection UI sees only these fixtures. The persisted intent scope
+// stays fixed so selecting another mock provider cannot bypass recovery.
+const mockWallets = new Map();
+function createMockWallet(name, account) {
+  const listeners = new Map();
+  const provider = Object.freeze({
+    request() { throw Error("MOCK_WALLET_REQUEST_BLOCKED"); },
+    on(event, listener) { listeners.set(event, listener); },
+    removeListener(event, listener) {
+      if (listeners.get(event) === listener) listeners.delete(event);
+    }
+  });
+  const wallet = {
+    name, provider, account, initialAccount: account, chainId: "0x38",
+    emit(event, value) { listeners.get(event)?.(value); }
+  };
+  mockWallets.set(provider, wallet);
+  return wallet;
+}
+
+const simulatedWallets = [
+  createMockWallet("Mock wallet A", DRY_SCOPE.wallet),
+  createMockWallet("Mock wallet B", DRY_SCOPE.wallet)
+];
+const fallbackWallet = createMockWallet("Mock fallback wallet", DRY_SCOPE.wallet);
+const mockDiscoveryEvents = new EventTarget();
+mockDiscoveryEvents.addEventListener("eip6963:requestProvider", () => {
+  for (const wallet of simulatedWallets) {
+    mockDiscoveryEvents.dispatchEvent(new CustomEvent("eip6963:announceProvider", {
+      detail: {info: {name: wallet.name}, provider: wallet.provider}
+    }));
+  }
+});
+const mockDiscovery = createWalletDiscovery({
+  eventTarget: mockDiscoveryEvents, getFallbackProvider: () => fallbackWallet.provider
+});
+const mockSession = createWalletSession({
+  async readProviderState(provider) {
+    const wallet = mockWallets.get(provider);
+    if (!wallet) throw Error("MOCK_WALLET_REQUIRED");
+    return {accounts: [wallet.account], chainId: wallet.chainId};
+  }
+});
+
+function requireCurrentMockSession(snapshot = mockSession.getSnapshot()) {
+  if (!mockWallets.has(snapshot.provider) || !mockSession.isCurrent(snapshot) ||
+      snapshot.account !== DRY_SCOPE.wallet) {
+    throw Error("VALID_CURRENT_BSC_MOCK_SESSION_REQUIRED");
+  }
+  return snapshot;
+}
+
+function mockActionLocks(snapshot) {
+  const locks = navigator.locks;
+  if (typeof locks?.request !== "function") throw Error("WEB_LOCKS_UNAVAILABLE");
+  return {request(key, options, callback) {
+    return locks.request(key, options, lock => {
+      requireCurrentMockSession(snapshot);
+      return callback(lock);
+    });
+  }};
+}
+
+function showMockSession(message = "") {
+  const snapshot = mockSession.getSnapshot();
+  const wallet = mockWallets.get(snapshot.provider);
+  $("mockWalletStatus").textContent = wallet
+    ? "Selected: " + wallet.name + " | account " + (snapshot.account || "—") +
+      " | chain " + (snapshot.chainId ?? "—") + " | " +
+      (snapshot.valid ? "Valid for BSC (56)" : "Session inactive or invalid for BSC (56)") +
+      (snapshot.valid && snapshot.account !== DRY_SCOPE.wallet ? " | Select the dry-run account to continue." : "") +
+      (message ? " | " + message : "")
+    : message || "No mock wallet selected.";
+  for (const id of ["mockWalletRefresh", "mockAccountChange", "mockChainChange", "mockDisconnect"]) {
+    $(id).disabled = !wallet;
+  }
+  showDryState();
+}
+
+async function refreshMockSession() {
+  const provider = mockSession.getSnapshot().provider;
+  const refreshing = mockSession.refresh();
+  const pending = mockSession.getSnapshot();
+  showMockSession("Refreshing mock session.");
+  try {
+    const snapshot = await refreshing;
+    if (mockSession.getSnapshot() === snapshot) showMockSession();
+  } catch (error) {
+    if (mockSession.getSnapshot() === pending && pending.provider === provider) {
+      showMockSession(error.message);
+    }
+  }
+}
+
+function findLegacyDryIntent() {
+  const recordPrefix = DRY_PREFIX + DRY_KEY.slice(0, -40);
+  for (let i = 0; i < localStorage.length; i++) {
+    const storageKey = localStorage.key(i);
+    if (!storageKey?.startsWith(recordPrefix) || storageKey === DRY_PREFIX + DRY_KEY) continue;
+    const record = readIntent(dryStorage, storageKey.slice(DRY_PREFIX.length));
+    if (record?.state === "LOCKED" || record?.state === "UNKNOWN") return record;
+  }
+  return null;
+}
+function prepareDryTransaction(operation, direction, observedAtMs) {
+  if (!Object.hasOwn(DRY_ROUTES, direction)) throw Error("UNSUPPORTED_SWAP_DIRECTION");
+  const route = DRY_ROUTES[direction];
+  const inputToken = DRY_TOKENS[route.input];
+  const deadlineSec = Math.floor(observedAtMs / 1000) + DRY_DEADLINE_SECONDS;
+  const metadata = {
+    direction, inputToken, outputToken: DRY_TOKENS[route.output], value: "0x0",
+    amountIn: DRY_AMOUNT.toString(), minimumOutput: DRY_MINIMUM.toString(), observedAtMs, deadlineSec
+  };
+  return operation === "APPROVAL" ? {
+    ...metadata, destination: inputToken, token: inputToken, spender: DRY_SCOPE.amm,
+    amount: metadata.amountIn, expectedCalldata: "0x095ea7b3" + word(DRY_SCOPE.amm) + word(hex(DRY_AMOUNT))
+  } : {
+    ...metadata, destination: DRY_SCOPE.amm,
+    expectedCalldata: route.selector + word(hex(DRY_AMOUNT)) + word(hex(DRY_MINIMUM)) + word(hex(BigInt(deadlineSec)))
+  };
+}
+
+function verifiedDryFixture(record) {
+  const metadata = record?.metadata;
+  const operation = metadata?.operation;
+  if ((operation !== "SWAP" && operation !== "APPROVAL") ||
+      record.chainId !== DRY_SCOPE.chainId || record.wallet !== DRY_SCOPE.wallet ||
+      record.amm !== DRY_SCOPE.amm) return null;
+  let fixture = LEGACY_DRY_TRANSACTIONS[operation];
+  if (metadata.direction === undefined) {
+    // A partial new-format record must not fall back to the legacy checks.
+    if (["inputToken", "outputToken", "value", "amountIn", "minimumOutput", "observedAtMs", "deadlineSec"]
+      .some(field => Object.hasOwn(metadata, field))) return null;
+  } else {
+    if (!Object.hasOwn(DRY_ROUTES, metadata.direction) || !Number.isSafeInteger(metadata.observedAtMs) ||
+        metadata.observedAtMs < 0 || record.amountIn !== DRY_AMOUNT.toString() ||
+        record.minimumOut !== DRY_MINIMUM.toString()) return null;
+    fixture = prepareDryTransaction(operation, metadata.direction, metadata.observedAtMs);
+  }
+  const expected = {...fixture, operation, chainId: DRY_SCOPE.chainId, wallet: DRY_SCOPE.wallet};
+  return Object.entries(expected).every(([field, value]) => metadata[field] === value) ? fixture : null;
+}
+
+function readDryAllowance({account, token, spender}) {
+  if (account !== DRY_SCOPE.wallet || spender !== DRY_SCOPE.amm ||
+      (token !== DRY_TOKENS.USDT && token !== DRY_TOKENS.YST)) throw Error("MOCK_ALLOWANCE_SCOPE_MISMATCH");
+  const active = readIntent(dryStorage, DRY_KEY);
+  if (isVerifiedTerminalIntent(active) && active.metadata.operation === "APPROVAL") {
+    const approval = verifiedDryFixture(active);
+    if (!approval) throw Error("MOCK_INTENT_METADATA_MISMATCH");
+    if (approval.token === token) return active.state === "CONFIRMED" ? BigInt(approval.amount) : 0n;
+  }
+  // Both input tokens start with a sufficient local fixture allowance.
+  return DRY_AMOUNT;
+}
+
+function showDryQuote() {
+  const direction = $("dryDirection").value;
+  const route = Object.hasOwn(DRY_ROUTES, direction) ? DRY_ROUTES[direction] : null;
+  $("dryQuote").textContent = route
+    ? "Input: " + DRY_AMOUNT + " " + route.input + " base units | Minimum output: " +
+      DRY_MINIMUM + " " + route.output + " base units"
+    : "Select a supported mock swap direction.";
+}
+
+function expectedDryHash(record) {
+  return record.previousIntentId ? record.id : DRY_HASH;
+}
+
+let dryBusy = false;
+function showDryState(message = "") {
+  const target = $("dryState");
+  $("dryRunBtn").disabled = true;
+  $("dryApprovalBtn").disabled = true;
+  $("dryRecoverBtn").disabled = true;
+  $("dryDirection").disabled = dryBusy;
+  const snapshot = mockSession.getSnapshot();
+  const sessionReady = mockSession.isCurrent(snapshot) && snapshot.account === DRY_SCOPE.wallet;
+  try {
+    const current = readIntent(dryStorage, DRY_KEY);
+    const legacy = findLegacyDryIntent();
+    const record = current ?? legacy;
+    if (!record) {
+      $("dryRunBtn").disabled = dryBusy || !sessionReady;
+      $("dryApprovalBtn").disabled = dryBusy || !sessionReady;
+      target.textContent = message || "No mock intent in this browser storage partition.";
+      return;
+    }
+    const operation = record.metadata?.operation;
+    const validMetadata = !!verifiedDryFixture(record);
+    const canRecover = validMetadata && record.state === "UNKNOWN" && record.txHash === expectedDryHash(record);
+    $("dryRecoverBtn").disabled = dryBusy || !canRecover || !sessionReady;
+    const canProgress = validMetadata && !legacy && isVerifiedTerminalIntent(current);
+    $("dryRunBtn").disabled = dryBusy || !sessionReady || !canProgress;
+    $("dryApprovalBtn").disabled = dryBusy || !sessionReady || !canProgress;
+    let review = "No retry authorized for this intent.";
+    if (canProgress) {
+      review = "Choose a new mock action to preserve this result and start a fresh intent.";
+    } else if (!validMetadata || (record.state === "UNKNOWN" && !record.txHash) ||
+        (["CONFIRMED", "REVERTED"].includes(record.state) && !isVerifiedTerminalIntent(record))) {
+      review = "Manual review required.";
+    } else if (record.state === "UNKNOWN" && !canRecover) {
+      review = "Unexpected mock hash. Manual review required.";
+    }
+    target.textContent = "Dry run persisted state: " + record.state +
+      " | ID " + record.id + " | operation " + (operation || "UNRECORDED") +
+      (validMetadata && record.metadata.direction ? " | " + record.metadata.direction : "") +
+      " | hash " + (record.txHash || "NOT RECORDED") + " | " + review +
+      (message ? " | " + message : "");
+  } catch (e) { target.textContent = "Dry run FAIL CLOSED: " + (e.message || String(e)); }
+}
+async function runDryIntegration(operation, previousIntentId) {
+  if (dryBusy) return;
+  dryBusy = true;
+  showDryState();
+  let message;
+  try {
+    const snapshot = requireCurrentMockSession();
+    if (findLegacyDryIntent()) throw Error("LEGACY_INTENT_REVIEW_REQUIRED");
+    const now = Date.now();
+    const direction = $("dryDirection").value;
+    const prepared = prepareDryTransaction(operation, direction, now);
+    const quoteMock = {
+      ...DRY_SCOPE,
+      observedAtMs: now, deadlineSec: prepared.deadlineSec,
+      amountIn: DRY_AMOUNT, quotedOut: 2n, minimumOut: DRY_MINIMUM, blockNumber: 100n
+    };
+    const idBytes = new Uint8Array(32);
+    crypto.getRandomValues(idBytes);
+    const intentId = "0x" + Array.from(idBytes, b => b.toString(16).padStart(2, "0")).join("");
+    const result = await runOfflineTransactionBoundary({
+      operation, direction, session: mockSession, snapshot, locks: navigator.locks, storage: dryStorage,
+      quote: quoteMock, intentId, readMockAllowance: readDryAllowance,
+      transaction: {from: snapshot.account, to: prepared.destination, data: prepared.expectedCalldata, value: prepared.value},
+      progression: previousIntentId ? {previousIntentId} : undefined,
+      simulateSubmission: () => previousIntentId ? intentId : DRY_HASH
+    });
+    message = result.outcome === "HASH_RECORDED"
+      ? (result.sessionChanged ? "Simulated hash recorded for the original intent after the session changed." :
+        "Simulated submission recorded.")
+      : "Mock submission remains UNKNOWN: " + result.outcome;
+  } catch (e) {
+    message = "FAIL CLOSED: " + (e.message || String(e));
+  } finally {
+    dryBusy = false;
+    showDryState(message);
+  }
+}
+
+function mockReceiptProvider({destination, expectedCalldata}, snapshot, hash) {
+  const tx = {hash, from: DRY_SCOPE.wallet, to: destination, input: expectedCalldata,
+    value: "0x0", blockHash: DRY_BLOCK_HASH, blockNumber: "0x64"};
+  const receipt = {transactionHash: hash, from: DRY_SCOPE.wallet, to: destination,
+    blockHash: DRY_BLOCK_HASH, blockNumber: "0x64", status: "0x1"};
+  const responses = {
+    eth_chainId: "0x38", eth_getTransactionByHash: tx,
+    eth_getTransactionReceipt: receipt, eth_blockNumber: "0x65",
+    eth_getBlockByNumber: {hash: DRY_BLOCK_HASH}
+  };
+  return {request: async ({method}) => {
+    requireCurrentMockSession(snapshot);
+    if (!Object.hasOwn(responses, method)) throw Error("UNEXPECTED_MOCK_RPC_METHOD");
+    return responses[method];
+  }};
+}
+
+async function recoverDryIntent() {
+  if (dryBusy) return;
+  dryBusy = true;
+  showDryState();
+  let message;
+  try {
+    const snapshot = requireCurrentMockSession();
+    const locks = mockActionLocks(snapshot);
+    const storage = {
+      getItem: dryStorage.getItem,
+      setItem(key, value) {
+        requireCurrentMockSession(snapshot);
+        dryStorage.setItem(key, value);
+      }
+    };
+    const persisted = readIntent(dryStorage, DRY_KEY);
+    if (persisted?.state !== "UNKNOWN") throw Error("UNKNOWN_INTENT_REQUIRED");
+    if (!persisted.txHash) throw Error("HASH_MISSING_MANUAL_REVIEW_REQUIRED");
+    const hash = expectedDryHash(persisted);
+    if (persisted.txHash !== hash) throw Error("MOCK_INTENT_HASH_MISMATCH");
+    const approval = persisted.metadata?.operation === "APPROVAL";
+    const transaction = verifiedDryFixture(persisted);
+    if (!transaction) throw Error(approval ? "APPROVAL_INTENT_METADATA_MISMATCH" : "SWAP_INTENT_METADATA_MISMATCH");
+    if (approval) {
+      const result = await verifyApprovalReceipt({
+        provider: mockReceiptProvider(transaction, snapshot, hash), locks, storage,
+        scope: DRY_SCOPE, intentId: persisted.id,
+        trustedApproval: {
+          token: transaction.token, spender: transaction.spender, amount: BigInt(transaction.amount)
+        }
+      });
+      requireCurrentMockSession(snapshot);
+      if (result.state === "UNKNOWN") {
+        message = "Mock approval remains UNKNOWN: " + result.reason;
+      } else {
+        message = "Mock approval receipt verified and final state persisted: " + result.state;
+      }
+      return;
+    }
+    const verified = await verifyOnChainReceipt({
+      provider: mockReceiptProvider(transaction, snapshot, hash), locks, storage,
+      quote: DRY_SCOPE, intentId: persisted.id, txHash: hash,
+      expectedCalldata: transaction.expectedCalldata, minConfirmations: 2
+    });
+    requireCurrentMockSession(snapshot);
+    if (verified.state === "UNKNOWN") {
+      message = "Mock swap remains UNKNOWN: " + verified.reason;
+    } else {
+      message = "PASS: mock swap receipt verified and final state persisted: " + verified.state;
+    }
+  } catch (e) {
+    message = "FAIL CLOSED: " + (e.message || String(e));
+  } finally {
+    dryBusy = false;
+    showDryState(message);
+  }
+}
+function requestDryAction(operation) {
+  try {
+    const active = readIntent(dryStorage, DRY_KEY);
+    if (isVerifiedTerminalIntent(active) && !verifiedDryFixture(active)) throw Error("MOCK_INTENT_METADATA_MISMATCH");
+    return runDryIntegration(operation, isVerifiedTerminalIntent(active) ? active.id : undefined);
+  } catch (error) {
+    showDryState("FAIL CLOSED: " + error.message);
+  }
+}
+$("dryRunBtn").addEventListener("click", () => requestDryAction("SWAP"));
+$("dryApprovalBtn").addEventListener("click", () => requestDryAction("APPROVAL"));
+$("dryRecoverBtn").addEventListener("click", recoverDryIntent);
+$("dryRefreshBtn").addEventListener("click", () => showDryState());
+$("dryDirection").addEventListener("change", showDryQuote);
+showDryQuote();
+
+mockDiscovery.start();
+for (const wallet of mockDiscovery.listWallets()) {
+  const option = document.createElement("option");
+  option.value = wallet.id;
+  option.textContent = wallet.name;
+  $("mockWalletChoice").append(option);
+}
+$("mockWalletChoice").addEventListener("change", event => {
+  try {
+    const choice = event.target.value;
+    if (!choice) {
+      mockSession.clear();
+      showMockSession();
+      return;
+    }
+    const provider = choice === "fallback" ? mockDiscovery.selectFallback() : mockDiscovery.selectWallet(choice);
+    if (!mockWallets.has(provider)) throw Error("MOCK_WALLET_REQUIRED");
+    mockSession.selectProvider(provider);
+    void refreshMockSession();
+  } catch (error) {
+    mockSession.clear();
+    showMockSession(error.message);
+  }
+});
+$("mockWalletRefresh").addEventListener("click", refreshMockSession);
+$("mockAccountChange").addEventListener("click", () => {
+  const wallet = mockWallets.get(mockSession.getSnapshot().provider);
+  if (!wallet) return;
+  const alternate = "0x" + "d".repeat(40);
+  wallet.account = wallet.account === alternate ? wallet.initialAccount : alternate;
+  wallet.emit("accountsChanged", [wallet.account]);
+  showMockSession();
+});
+$("mockChainChange").addEventListener("click", () => {
+  const wallet = mockWallets.get(mockSession.getSnapshot().provider);
+  if (!wallet) return;
+  wallet.chainId = wallet.chainId === "0x38" ? "0x1" : "0x38";
+  wallet.emit("chainChanged", wallet.chainId);
+  showMockSession();
+});
+$("mockDisconnect").addEventListener("click", () => {
+  const wallet = mockWallets.get(mockSession.getSnapshot().provider);
+  if (!wallet) return;
+  wallet.emit("disconnect");
+  showMockSession();
+});
+window.addEventListener("pagehide", event => {
+  if (event.persisted) return;
+  mockSession.clear();
+  mockDiscovery.stop();
+});
+showMockSession();
+
+// Real connections expose session and intent status only. The dry run above
+// retains its private discovery target, session and submission fixture.
+const realDiscovery = createWalletDiscovery({
+  eventTarget: window, getFallbackProvider: () => window.ethereum
+});
+let realBinding = null;
+let pendingPermission = null;
+let nextPermissionId = 0;
+const realSession = createWalletSession({
+  async readProviderState(provider) {
+    const binding = realBinding;
+    if (binding?.provider !== provider || !binding.permissionGranted) throw Error("WALLET_CONNECTION_REQUIRED");
+    const snapshot = realSession.getSnapshot();
+    const accounts = await provider.request({method: "eth_accounts"});
+    if (realBinding !== binding || !binding.permissionGranted || realSession.getSnapshot() !== snapshot) {
+      throw Error("WALLET_SESSION_CHANGED");
+    }
+    const chainId = await provider.request({method: "eth_chainId"});
+    return {accounts, chainId};
+  }
+});
+
+let previewGeneration = 0;
+let previewExpiry;
+let reviewedRealPreview = null;
+let stagedLiveFirstUse = null;
+function invalidateRealPreview(message = "Prepare a fresh quote.") {
+  previewGeneration++;
+  reviewedRealPreview = null;
+  stagedLiveFirstUse = null;
+  clearTimeout(previewExpiry);
+  $("realQuoteStatus").textContent = message;
+}
+
+function isPreviewSessionCurrent(snapshot) {
+  return realBinding?.permissionGranted && !realBinding.refreshing && !pendingPermission &&
+    realBinding.choice.startsWith("injected-") && realBinding.choice === $("realWalletChoice").value &&
+    realBinding.provider === snapshot.provider && realSession.isCurrent(snapshot);
+}
+
+function getReviewedRealPreview() {
+  const preview = reviewedRealPreview;
+  if (!preview || preview.generation !== previewGeneration || preview.binding !== realBinding ||
+      preview.provider !== realBinding?.provider || !isPreviewSessionCurrent(preview.snapshot) ||
+      preview.direction !== $("realQuoteDirection").value || preview.amount !== $("realQuoteAmount").value) {
+    return null;
+  }
+  // Timers can be delayed in background tabs. Validate freshness at use.
+  try {
+    validateQuote(preview.quote);
+  } catch {
+    invalidateRealPreview("Quote expired. Prepare a fresh preview.");
+    return null;
+  }
+  return preview;
+}
+
+async function prepareRealPreview() {
+  const binding = realBinding;
+  const snapshot = realSession.getSnapshot();
+  if (!isPreviewSessionCurrent(snapshot)) {
+    invalidateRealPreview("Select an EIP-6963 wallet with a valid BSC session.");
+    return;
+  }
+  const direction = $("realQuoteDirection").value;
+  const amount = $("realQuoteAmount").value;
+  invalidateRealPreview("Reading quote and allowance.");
+  const generation = previewGeneration;
+  const current = candidate => generation === previewGeneration && binding === realBinding &&
+    isPreviewSessionCurrent(candidate) &&
+    $("realQuoteDirection").value === direction && $("realQuoteAmount").value === amount;
+  try {
+    const result = await prepareReadOnlyQuote({snapshot, direction, amount, isCurrent: current});
+    if (!current(snapshot)) return;
+    const sender = snapshot.account;
+    if (result.quote.wallet !== sender || result.swap.from !== sender ||
+        (result.approval && result.approval.from !== sender)) {
+      invalidateRealPreview("Preview sender differs from the selected wallet account.");
+      return;
+    }
+    reviewedRealPreview = Object.freeze({
+      binding, provider: snapshot.provider, snapshot, generation, direction, amount, sender,
+      quote: result.quote, blockHash: result.blockHash, allowance: result.allowance,
+      swap: result.swap, approval: result.approval
+    });
+    const preview = getReviewedRealPreview();
+    if (!preview) return;
+    const {quote, allowance, approval, swap} = preview;
+    const {input, output} = result;
+    const display = (value, token) => formatPreviewAmount(value) + " " + token.symbol;
+    $("realQuoteStatus").textContent = [
+      "Sender reported by wallet: " + preview.sender,
+      "Direction: " + input.symbol + " → " + output.symbol,
+      "Input: " + display(quote.amountIn, input),
+      "Estimated output: " + display(quote.quotedOut, output),
+      "Minimum output: " + display(quote.minimumOut, output),
+      "Slippage: 0.5%",
+      "Quote: " + new Date(quote.observedAtMs).toISOString() + " | block " + quote.blockNumber,
+      "Deadline: " + new Date(quote.deadlineSec * 1000).toISOString(),
+      "Allowance: " + display(allowance, input),
+      approval ? "Approval required: " + display(quote.amountIn, input) + " | token " + approval.to +
+        " | spender " + swap.to : "Approval required: no",
+      "AMM destination: " + swap.to
+    ].join("\n");
+    previewExpiry = setTimeout(() => {
+      if (generation === previewGeneration) invalidateRealPreview("Quote expired. Prepare a fresh preview.");
+    }, Math.max(0, quote.observedAtMs + MAX_QUOTE_AGE_MS - Date.now()));
+  } catch (error) {
+    if (current(snapshot)) invalidateRealPreview("Preview unavailable. " + (error?.message || "Provider read failed."));
+  }
+}
+
+const PUBLIC_HANDOFF_MOCK_PREFIX = "ystar-phase9-public-handoff-mock-only:";
+const publicHandoffMockStorage = {
+  getItem: key => localStorage.getItem(PUBLIC_HANDOFF_MOCK_PREFIX + key),
+  setItem: (key, value) => localStorage.setItem(PUBLIC_HANDOFF_MOCK_PREFIX + key, value)
+};
+const PUBLIC_HANDOFF_READS = new Set([
+  "eth_chainId", "eth_accounts", "eth_getBlockByNumber", "eth_call",
+  "eth_getTransactionByHash", "eth_getTransactionReceipt", "eth_blockNumber"
+]);
+
+// Offline harness entry point. The reader supplies synthetic responses,
+// and the submission callback can only return a fixture hash or null.
+// No public control is wired to this entry point.
+async function runPublicMockHandoff({operation, direction, readSynthetic, syntheticHash = null}) {
+  const preview = getReviewedRealPreview();
+  if (!preview || direction !== preview.direction) throw Error("REVIEWED_PREVIEW_REQUIRED");
+  if (operation !== "SWAP" && operation !== "APPROVAL") throw Error("INVALID_OPERATION");
+  const transaction = operation === "SWAP" ? preview.swap : preview.approval;
+  if (!transaction) throw Error("REVIEWED_APPROVAL_REQUIRED");
+  if (typeof readSynthetic !== "function" ||
+      (syntheticHash !== null && (typeof syntheticHash !== "string" || !/^0x[0-9a-f]{64}$/i.test(syntheticHash)))) {
+    throw Error("INVALID_HANDOFF_FIXTURE");
+  }
+
+  const session = {isCurrent: snapshot => snapshot === preview.snapshot && getReviewedRealPreview() === preview};
+  async function read(method, params = []) {
+    if (!PUBLIC_HANDOFF_READS.has(method)) throw Error("HANDOFF_METHOD_BLOCKED");
+    if (!session.isCurrent(preview.snapshot)) throw Error("REVIEWED_PREVIEW_CHANGED");
+    const result = await readSynthetic({method, params});
+    if (!session.isCurrent(preview.snapshot)) throw Error("REVIEWED_PREVIEW_CHANGED");
+    return result;
+  }
+  const storage = publicHandoffMockStorage;
+  const previous = readIntent(storage, scopeKey(preview.quote));
+  if (previous && !isVerifiedTerminalIntent(previous)) throw Error("HANDOFF_INTENT_REVIEW_REQUIRED");
+  const idBytes = crypto.getRandomValues(new Uint8Array(32));
+  const intentId = "0x" + Array.from(idBytes, byte => byte.toString(16).padStart(2, "0")).join("");
+  try {
+    return await runRevalidatedOfflineTransactionBoundary({
+      session, snapshot: preview.snapshot, storage, locks: navigator.locks,
+      operation, direction, intentId, quote: preview.quote, transaction,
+      reviewedAllowance: preview.allowance,
+      progression: previous ? {previousIntentId: previous.id} : undefined,
+      async preflight(context) {
+        const {inputToken, allowance} = await recheckReviewedQuote({
+          quote: preview.quote, blockHash: preview.blockHash, direction, read
+        });
+        return {context, provider: preview.provider, account: preview.sender,
+          chainId: preview.snapshot.chainId, inputToken, spender: preview.quote.amm, allowance};
+      },
+      simulateSubmission: () => syntheticHash
+    }, {provider: {request: ({method, params}) => read(method, params)}});
+  } finally {
+    if (reviewedRealPreview === preview) invalidateRealPreview();
+  }
+}
+
+const LIVE_PREFLIGHT_MAX_AGE_MS = 5_000;
+// Configure only after two independent BSC read sources pass separate review.
+const LIVE_FINALITY_POLICY = Object.freeze({mode: SINGLE_SOURCE_NATIVE_FINALITY, sources: Object.freeze([])});
+const LIVE_CANONICAL_RECEIPT_SOURCE = null;
+const LIVE_FIRST_USE_ENABLED = false;
+
+function newLiveIntentId() {
+  const bytes = crypto.getRandomValues(new Uint8Array(32));
+  return "0x" + Array.from(bytes, byte => byte.toString(16).padStart(2, "0")).join("");
+}
+
+// Internal fixture entry point. It has no page control or event listener.
+function stageLiveFirstUseAuthorization({operation, direction, review, readSyntheticNonces}) {
+  if (!TRADING_ENABLED || !LIVE_FIRST_USE_ENABLED) throw Error("LIVE_FIRST_USE_DISABLED");
+  if (stagedLiveFirstUse) throw Error("FIRST_USE_AUTHORIZATION_ALREADY_STAGED");
+  const preview = getReviewedRealPreview();
+  if (!preview || direction !== preview.direction ||
+      (operation !== "SWAP" && operation !== "APPROVAL") || review?.origin !== location.origin) {
+    throw Error("FIRST_USE_CONTEXT_INVALID");
+  }
+  const transaction = operation === "SWAP" ? preview.swap : preview.approval;
+  if (!transaction) throw Error("REVIEWED_TRANSACTION_REQUIRED");
+  const intentId = newLiveIntentId();
+  const authorization = issueSyntheticFirstUseAuthorization({
+    storage: localStorage, quote: preview.quote, snapshot: preview.snapshot, transaction,
+    operation, direction, intentId, reviewedAllowance: preview.allowance, review, readSyntheticNonces
+  });
+  stagedLiveFirstUse = Object.freeze({preview, operation, intentId, authorization});
+}
+
+// Disabled scaffold. Public buttons remain wired to the blocked handlers.
+async function runDisabledLiveHandoff({operation, direction}) {
+  if (!TRADING_ENABLED) throw Error("LIVE_HANDOFF_DISABLED");
+  if (operation !== "SWAP" && operation !== "APPROVAL") throw Error("INVALID_OPERATION");
+  const preview = getReviewedRealPreview();
+  if (!preview || direction !== preview.direction) throw Error("REVIEWED_PREVIEW_REQUIRED");
+  const {provider, snapshot, sender, quote, blockHash, allowance} = preview;
+  const transaction = operation === "SWAP" ? preview.swap : preview.approval;
+  if (!transaction || transaction.from !== sender) throw Error("REVIEWED_TRANSACTION_REQUIRED");
+
+  // The unprefixed public scope is separate from mock and legacy records.
+  const storage = localStorage;
+  const previous = readIntent(storage, scopeKey(quote));
+  const firstUse = stagedLiveFirstUse;
+  if (firstUse) {
+    if (!LIVE_FIRST_USE_ENABLED || previous !== null || firstUse.preview !== preview || firstUse.operation !== operation) {
+      throw Error("LIVE_INTENT_RECONCILIATION_REQUIRED");
+    }
+  } else if (!isVerifiedTerminalIntent(previous)) {
+    throw Error("LIVE_INTENT_RECONCILIATION_REQUIRED");
+  }
+
+  const request = provider.request.bind(provider);
+  const intentId = firstUse?.intentId ?? newLiveIntentId();
+  let preflightStarted;
+  const session = {isCurrent: candidate => candidate === snapshot && getReviewedRealPreview() === preview &&
+    (preflightStarted === undefined || performance.now() - preflightStarted <= LIVE_PREFLIGHT_MAX_AGE_MS)};
+  async function read(method, params = []) {
+    if (!PUBLIC_HANDOFF_READS.has(method)) throw Error("HANDOFF_METHOD_BLOCKED");
+    if (!session.isCurrent(snapshot)) throw Error("LIVE_HANDOFF_EVIDENCE_STALE");
+    const result = await request({method, params});
+    if (!session.isCurrent(snapshot)) throw Error("LIVE_HANDOFF_EVIDENCE_STALE");
+    return result;
+  }
+
+  try {
+    // The boundary holds the scope lock through preflight, terminal
+    // revalidation, persistence, and the final readiness check.
+    const result = await runRevalidatedOfflineTransactionBoundary({
+      session, snapshot, storage, locks: navigator.locks,
+      operation, direction, intentId, quote, transaction, reviewedAllowance: allowance,
+      progression: firstUse ? undefined : {previousIntentId: previous.id},
+      firstUseAuthorization: firstUse?.authorization,
+      async preflight(context) {
+        preflightStarted = performance.now();
+        const current = await recheckReviewedQuote({quote, blockHash, direction, read});
+        return {context, provider, account: sender, chainId: snapshot.chainId,
+          inputToken: current.inputToken, spender: quote.amm, allowance: current.allowance};
+      },
+      simulateSubmission() { throw Error("LIVE_SUBMISSION_DISABLED"); }
+    }, {finalityPolicy: LIVE_FINALITY_POLICY});
+    if (result.outcome === "HASH_RECEIVED_PERSISTENCE_UNVERIFIED") showLiveHashEvidence(result);
+    return result;
+  } finally {
+    if (reviewedRealPreview === preview) invalidateRealPreview();
+  }
+}
+
+function showLiveHashEvidence({txHash, intentId, scope}) {
+  const target = $("liveHashEvidence");
+  target.textContent += (target.textContent ? "\n\n" : "") +
+    "Hash received. Storage could not be verified. Copy this evidence for manual reconciliation.\n" +
+    "Transaction hash: " + txHash + "\nIntent ID: " + intentId + "\nChain: " + scope.chainId +
+    "\nWallet: " + scope.wallet + "\nAMM: " + scope.amm;
+  target.hidden = false;
+}
+
+function showRealIntent(snapshot = realSession.getSnapshot()) {
+  const target = $("realIntentStatus");
+  const observation = $("realReceiptObservation");
+  const recover = $("realRecoverBtn");
+  observation.textContent = "";
+  target.textContent = "";
+  recover.disabled = true;
+  if (!realBinding?.permissionGranted || !realSession.isCurrent(snapshot)) {
+    realReceiptObservation = null;
+    return;
+  }
+  try {
+    const key = scopeKey({chainId: snapshot.chainId, wallet: snapshot.account, amm: CONFIG.amm});
+    const intent = readIntent(localStorage, key);
+    target.textContent = intent
+      ? "Saved intent: " + intent.state + " | ID " + intent.id +
+        (intent.state === "UNKNOWN" ? intent.txHash ? " | Unresolved. No retry authorized."
+          : " | No transaction hash. Manual reconciliation required."
+          : isVerifiedTerminalIntent(intent) ? " | Saved outcome. Fresh finality recheck required." : "")
+      : "No saved intent in this browser storage partition.";
+    if (realReceiptObservation?.key === key && realSession.isCurrent(realReceiptObservation.snapshot) &&
+        realReceiptObservation.bytes === JSON.stringify(intent)) {
+      observation.textContent = realReceiptObservation.label;
+    } else {
+      realReceiptObservation = null;
+    }
+    recover.disabled = realRecoveryBusy || !isPreviewSessionCurrent(snapshot) ||
+      !intent?.txHash || !(intent.state === "UNKNOWN" || isVerifiedTerminalIntent(intent));
+  } catch {
+    realReceiptObservation = null;
+    target.textContent = "Saved intent unavailable. Storage review required.";
+  }
+}
+
+const LIVE_RECOVERY_ROUTES = Object.freeze({
+  USDT_TO_YST: {input: CONFIG.usdt.toLowerCase(), output: CONFIG.yst.toLowerCase(), selector: "0x8e6bcbf0"},
+  YST_TO_USDT: {input: CONFIG.yst.toLowerCase(), output: CONFIG.usdt.toLowerCase(), selector: "0xc8f9edd8"}
+});
+let realRecoveryBusy = false;
+let realReceiptObservation = null;
+
+function validateLiveRecoveryMetadata(record) {
+  const m = record.metadata;
+  const route = Object.hasOwn(LIVE_RECOVERY_ROUTES, m?.direction) && LIVE_RECOVERY_ROUTES[m.direction];
+  const positiveUint = value => typeof value === "string" && /^[1-9][0-9]{0,77}$/.test(value) &&
+    BigInt(value) < (1n << 256n);
+  if (!route || (m.operation !== "SWAP" && m.operation !== "APPROVAL") ||
+      m.chainId !== record.chainId || m.wallet !== record.wallet || m.value !== "0x0" ||
+      m.inputToken !== route.input || m.outputToken !== route.output ||
+      m.amountIn !== record.amountIn || m.minimumOutput !== record.minimumOut ||
+      !positiveUint(m.amountIn) || !positiveUint(m.minimumOutput) || !positiveUint(record.blockNumber) ||
+      !Number.isSafeInteger(m.observedAtMs) || m.observedAtMs < 0 ||
+      !Number.isSafeInteger(m.deadlineSec) || m.deadlineSec <= Math.floor(m.observedAtMs / 1000)) {
+    throw Error("LIVE_RECOVERY_METADATA_INVALID");
+  }
+  const amount = BigInt(m.amountIn);
+  if (m.operation === "APPROVAL") {
+    if (m.destination !== route.input || m.token !== route.input || m.spender !== record.amm ||
+        m.amount !== m.amountIn || m.expectedCalldata !== SEL.approve + word(record.amm) + word(hex(amount))) {
+      throw Error("LIVE_RECOVERY_METADATA_INVALID");
+    }
+    return {token: route.input, spender: record.amm, amount};
+  }
+  const calldata = route.selector + word(hex(amount)) + word(hex(BigInt(m.minimumOutput))) +
+    word(hex(BigInt(m.deadlineSec)));
+  if (m.destination !== record.amm || m.expectedCalldata !== calldata) throw Error("LIVE_RECOVERY_METADATA_INVALID");
+  return null;
+}
+
+async function recoverRealIntent() {
+  const binding = realBinding;
+  const snapshot = realSession.getSnapshot();
+  const current = () => binding === realBinding && isPreviewSessionCurrent(snapshot);
+  if (realRecoveryBusy || !current()) return;
+  realRecoveryBusy = true;
+  const status = $("realRecoveryStatus");
+  const prior = realReceiptObservation;
+  realReceiptObservation = null;
+  showRealIntent(snapshot);
+  status.textContent = "Checking saved receipt.";
+  try {
+    const scope = Object.freeze({chainId: snapshot.chainId, wallet: snapshot.account, amm: CONFIG.amm});
+    const key = scopeKey(scope);
+    const original = readIntent(localStorage, key);
+    if (!original || !original.txHash || original.wallet !== snapshot.account ||
+        !(original.state === "UNKNOWN" ? !Object.hasOwn(original, "verifiedReceipt") : isVerifiedTerminalIntent(original))) {
+      throw Error("LIVE_RECOVERY_MANUAL_REVIEW_REQUIRED");
+    }
+    const trustedApproval = validateLiveRecoveryMetadata(original);
+    const originalBytes = JSON.stringify(original);
+    const requireOriginal = () => {
+      if (!current() || JSON.stringify(readIntent(localStorage, key)) !== originalBytes) {
+        throw Error("LIVE_RECOVERY_CONTEXT_CHANGED");
+      }
+    };
+    const locks = {request(name, options, callback) {
+      if (name !== key || options.mode !== "exclusive") throw Error("LIVE_RECOVERY_SCOPE_MISMATCH");
+      return navigator.locks.request(name, options, lock => {
+        if (!lock) throw Error("WEB_LOCK_NOT_GRANTED");
+        requireOriginal();
+        return callback(lock);
+      });
+    }};
+    const storage = {
+      getItem(name) {
+        if (name !== key) throw Error("LIVE_RECOVERY_SCOPE_MISMATCH");
+        return localStorage.getItem(key);
+      },
+      setItem(name, value) {
+        if (name !== key || original.state !== "UNKNOWN") throw Error("LIVE_RECOVERY_SCOPE_MISMATCH");
+        requireOriginal();
+        localStorage.setItem(key, value);
+      }
+    };
+    const remember = (record, label, evidence) => {
+      if (current()) realReceiptObservation = {key, snapshot, bytes: JSON.stringify(record), label, evidence};
+    };
+    const finalizedLabel = state => state === "CONFIRMED" ? "FINALIZED" : "REVERTED (finalized)";
+    const finalityPolicy = LIVE_FINALITY_POLICY.sources.length ? pinFinalityPolicy(LIVE_FINALITY_POLICY) : LIVE_FINALITY_POLICY;
+    const common = {locks, storage, intentId: original.id, finalityPolicy};
+    if (original.state !== "UNKNOWN") {
+      await locks.request(key, {mode: "exclusive"}, async () => {
+        await recheckTerminalReceipt({record: original, finalityPolicy});
+        requireOriginal();
+      });
+      if (current()) status.textContent = "Saved terminal receipt revalidated: " + original.state + ".";
+      remember(original, finalizedLabel(original.state));
+      return;
+    }
+    let observedReceipt;
+    const canonicalSource = finalityPolicy.mode === SINGLE_SOURCE_NATIVE_FINALITY && finalityPolicy.sources.length
+      ? finalityPolicy.sources[0].provider : LIVE_CANONICAL_RECEIPT_SOURCE;
+    if (canonicalSource) {
+      const observed = await inspectCanonicalReceipt({...common, scope, txHash: original.txHash,
+        provider: canonicalSource, expectedCalldata: original.metadata.expectedCalldata,
+        trustedApproval: trustedApproval ?? undefined});
+      requireOriginal();
+      observedReceipt = observed.evidence;
+      if (prior?.key === key && realSession.isCurrent(prior.snapshot) && prior.bytes === originalBytes &&
+          prior.evidence && ["blockNumber", "blockHash", "status"].some(
+            field => prior.evidence[field] !== observedReceipt?.[field])) {
+        throw Error("PROVISIONAL_RECEIPT_CHANGED");
+      }
+      if (observed.state === "UNKNOWN") {
+        status.textContent = "Receipt verification unavailable. The saved intent remains unchanged.";
+        return;
+      }
+      remember(original, observed.state, observedReceipt);
+      if (observed.state === "PENDING") {
+        status.textContent = "Transaction pending. Intent remains UNKNOWN.";
+        return;
+      }
+      requireFinalitySources(finalityPolicy);
+    }
+    const result = trustedApproval
+      ? await verifyApprovalReceipt({...common, scope, trustedApproval, observedReceipt})
+      : await verifyOnChainReceipt({...common, quote: scope, txHash: original.txHash,
+        expectedCalldata: original.metadata.expectedCalldata, observedReceipt});
+    if (result.state === "UNKNOWN") {
+      requireOriginal();
+      if (observedReceipt && result.reason !== "AWAITING_FINALITY") throw Error("PROVISIONAL_RECEIPT_CHANGED");
+    } else if (current()) {
+      const stored = readIntent(localStorage, key);
+      if (stored?.id === original.id && stored.txHash === original.txHash && stored.state === result.state) {
+        remember(stored, finalizedLabel(result.state));
+      }
+    }
+    if (current()) status.textContent = result.state === "UNKNOWN"
+      ? result.reason === "AWAITING_FINALITY" ? "Waiting for finalized inclusion. Intent remains UNKNOWN."
+        : "Transaction or receipt unavailable. Intent remains UNKNOWN."
+      : "Saved receipt verified: " + result.state + ".";
+  } catch (error) {
+    if (!["FINALITY_SOURCES_UNAPPROVED", "NATIVE_FINALIZED_TAG_UNAVAILABLE"].includes(error.message)) {
+      realReceiptObservation = null;
+    }
+    if (current()) {
+      if (error.message === "FINALITY_SOURCES_UNAPPROVED") {
+        status.textContent = "Receipt finality unavailable. Configure the required approved BSC read source(s).";
+      } else if (error.message === "NATIVE_FINALIZED_TAG_UNAVAILABLE") {
+        status.textContent = "Native finality unavailable. The saved intent remains UNKNOWN.";
+      } else if (["CANONICAL_RPC_TIMEOUT", "CANONICAL_RPC_READ_FAILED"].includes(error.message)) {
+        status.textContent = "Receipt verification unavailable. The saved intent remains unchanged.";
+      } else if (["AWAITING_FINALITY", "FINALITY_RPC_TIMEOUT", "FINALITY_RPC_READ_FAILED"].includes(error.message)) {
+        status.textContent = "Receipt finality could not be established. The saved intent remains unchanged.";
+      } else {
+        status.textContent = "Receipt could not be verified. Manual reconciliation required.";
+      }
+    }
+  } finally {
+    realRecoveryBusy = false;
+    showRealIntent();
+  }
+}
+
+function showRealSession(message = "") {
+  const snapshot = realSession.getSnapshot();
+  const binding = realBinding;
+  $("realRecoveryStatus").textContent = "";
+  const busy = !!pendingPermission || !!binding?.refreshing;
+  $("realConnectBtn").disabled = !binding || busy || (binding.permissionGranted && !!snapshot.account);
+  $("realRefreshBtn").disabled = !binding?.permissionGranted || busy;
+  $("realQuoteBtn").disabled = !isPreviewSessionCurrent(snapshot);
+  $("realWalletStatus").textContent = binding
+    ? "Selected: " + binding.name + " | account " + (snapshot.account || "—") +
+      " | chain " + (snapshot.chainId ?? "—") + " | " +
+      (binding.permissionGranted && realSession.isCurrent(snapshot) ? "Valid for BSC Mainnet (56)" :
+        snapshot.chainId != null && snapshot.chainId !== 56 ? "Wrong chain. Switch manually in your wallet." :
+          "Session inactive or invalid.") + (message ? " | " + message : "")
+    : message || "No wallet selected.";
+  showRealIntent(snapshot);
+}
+
+function renderRealWalletChoices() {
+  const picker = $("realWalletChoice");
+  const selected = picker.value;
+  picker.options.length = 2;
+  for (const wallet of realDiscovery.listWallets()) {
+    const option = document.createElement("option");
+    option.value = wallet.id;
+    option.textContent = wallet.name;
+    picker.append(option);
+  }
+  picker.value = selected;
+  if (picker.selectedIndex < 0) picker.value = "";
+}
+
+function clearRealWallet() {
+  const previous = realBinding;
+  realBinding = null;
+  invalidateRealPreview();
+  const errors = [];
+  for (const [event, listener] of previous?.listeners ?? []) {
+    try {
+      previous.provider.removeListener(event, listener);
+    } catch (error) {
+      errors.push(error);
+    }
+  }
+  try {
+    realSession.clear();
+  } catch (error) {
+    errors.push(error);
+  }
+  if (errors.length) throw new AggregateError(errors, "WALLET_LISTENER_CLEANUP_FAILED");
+}
+
+function selectRealWallet(choice) {
+  try {
+    clearRealWallet();
+    if (!choice) { showRealSession(); return; }
+    const fallback = choice === "fallback";
+    const provider = fallback ? realDiscovery.selectFallback() : realDiscovery.selectWallet(choice);
+    const name = fallback ? "Legacy injected wallet" :
+      realDiscovery.listWallets().find(wallet => wallet.id === choice).name;
+    realSession.selectProvider(provider);
+    const binding = {provider, name, choice, permissionGranted: false, epoch: 0, refreshing: false, listeners: []};
+    realBinding = binding;
+    for (const event of ["accountsChanged", "chainChanged", "disconnect"]) {
+      const listener = () => {
+        if (realBinding !== binding) return;
+        invalidateRealPreview();
+        if (event === "disconnect") {
+          binding.epoch++;
+          binding.permissionGranted = false;
+        }
+        showRealSession(event === "disconnect" ? "Wallet disconnected." : "");
+      };
+      binding.listeners.push([event, listener]);
+      provider.on(event, listener);
+    }
+    showRealSession();
+  } catch {
+    try { clearRealWallet(); } catch { /* The old binding is already invalidated. */ }
+    $("realWalletChoice").value = "";
+    showRealSession("Selected wallet is unavailable.");
+  }
+}
+
+async function refreshRealWallet(binding) {
+  if (realBinding !== binding || !binding.permissionGranted || binding.refreshing) return "";
+  const epoch = binding.epoch;
+  binding.refreshing = true;
+  invalidateRealPreview();
+  showRealSession("Refreshing wallet session.");
+  let message = "";
+  try {
+    await realSession.refresh();
+  } catch {
+    message = "Session refresh failed or changed. Refresh again to inspect it.";
+  } finally {
+    binding.refreshing = false;
+    if (realBinding === binding) showRealSession(binding.epoch === epoch ? message : "");
+  }
+  return message;
+}
+
+async function connectRealWallet() {
+  const binding = realBinding;
+  if (!binding || pendingPermission || binding.refreshing ||
+      (binding.permissionGranted && realSession.getSnapshot().account)) return;
+  const attempt = {id: ++nextPermissionId, binding, epoch: binding.epoch};
+  pendingPermission = attempt;
+  const isCurrentAttempt = () => pendingPermission?.id === attempt.id &&
+    realBinding === attempt.binding && binding.epoch === attempt.epoch;
+  let message = "";
+  showRealSession("Waiting for wallet permission.");
+  try {
+    await binding.provider.request({method: "eth_requestAccounts"});
+    if (!isCurrentAttempt()) return;
+    binding.permissionGranted = true;
+    message = await refreshRealWallet(binding);
+  } catch (error) {
+    if (isCurrentAttempt()) {
+      message = error?.code === 4001 ? "Wallet permission declined." : "Wallet permission request failed.";
+    }
+  } finally {
+    const current = isCurrentAttempt();
+    if (pendingPermission === attempt) pendingPermission = null;
+    showRealSession(current ? message : "");
+  }
+}
+
+function startRealDiscovery() {
+  realDiscovery.start();
+  window.addEventListener("eip6963:announceProvider", renderRealWalletChoices);
+  renderRealWalletChoices();
+  showRealSession();
+}
+$("realWalletChoice").addEventListener("change", event => selectRealWallet(event.target.value));
+$("realConnectBtn").addEventListener("click", connectRealWallet);
+$("realQuoteBtn").addEventListener("click", prepareRealPreview);
+$("realRecoverBtn").addEventListener("click", recoverRealIntent);
+$("realQuoteDirection").addEventListener("change", () => invalidateRealPreview());
+$("realQuoteAmount").addEventListener("input", () => invalidateRealPreview());
+$("realRefreshBtn").addEventListener("click", () => {
+  if (realBinding && !pendingPermission) void refreshRealWallet(realBinding);
+});
+window.addEventListener("pagehide", () => {
+  window.removeEventListener("eip6963:announceProvider", renderRealWalletChoices);
+  realDiscovery.stop();
+  try { clearRealWallet(); } catch { /* The old binding is already invalidated. */ }
+  $("realWalletChoice").value = "";
+});
+window.addEventListener("pageshow", event => { if (event.persisted) startRealDiscovery(); });
+startRealDiscovery();
+
+inspectPhase9Intent();
+window.addEventListener("storage", event => {
+  inspectPhase9Intent();
+  showRealIntent();
+  if (event.key === null || event.key.startsWith(DRY_PREFIX)) showDryState();
+});
+$("approveBtn").addEventListener("click", approve);
+$("swapBtn").addEventListener("click", swap);
+</script>
+</body>
+</html>
+
+
+
+
+
