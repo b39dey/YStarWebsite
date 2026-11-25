@@ -1,0 +1,23 @@
+import {strict as assert} from "node:assert";
+import {scopeKey,validateQuote,acquireIntent,readIntent,markUnknown,recordVerifiedReceipt} from "./public-safety.mjs";
+const wallet="0x317F835aF5C5eC9089d765884DA88354f8c8680c";
+const other="0x1111111111111111111111111111111111111111";
+const amm="0x17dAc8A164Ce434fE36A2D6029Bf4431a22397e2";
+const now=1_800_000_000_000;
+const q={chainId:56,amm,wallet,observedAtMs:now-1000,deadlineSec:Math.floor(now/1000)+300,amountIn:100000000000000000n,quotedOut:1630393132589472651104n,minimumOut:1622241166926525287848n,blockNumber:133115164n};
+const id="0x"+"a".repeat(64),hash="0x"+"b".repeat(64);
+const map=new Map(),storage={getItem:k=>map.has(k)?map.get(k):null,setItem:(k,v)=>map.set(k,v)};
+let passed=0;function test(name,fn){fn();passed++;console.log("PASS",name)}
+test("valid quote",()=>assert.equal(validateQuote(q,now),true));
+test("expired quote rejected",()=>assert.throws(()=>validateQuote({...q,observedAtMs:now-31000},now),/QUOTE_STALE/));
+test("expired deadline rejected",()=>assert.throws(()=>validateQuote({...q,deadlineSec:Math.floor(now/1000)},now),/DEADLINE_EXPIRED/));
+test("wrong chain rejected",()=>assert.throws(()=>validateQuote({...q,chainId:1},now),/QUOTE_SCOPE_MISMATCH/));
+test("wallet isolation",()=>assert.notEqual(scopeKey(q),scopeKey({...q,wallet:other})));
+test("acquire lock",()=>assert.equal(acquireIntent(storage,q,id,now).state,"LOCKED"));
+test("duplicate rejected",()=>assert.throws(()=>acquireIntent(storage,q,id,now),/INTENT_ALREADY_LOCKED/));
+test("unknown persists",()=>assert.equal(markUnknown(storage,scopeKey(q),id,hash).state,"UNKNOWN"));
+test("wrong receipt hash rejected",()=>assert.throws(()=>recordVerifiedReceipt(storage,scopeKey(q),id,{chainId:56,wallet,to:amm,txHash:id,status:"success"}),/RECEIPT_HASH_MISMATCH/));
+test("receipt records final state",()=>assert.equal(recordVerifiedReceipt(storage,scopeKey(q),id,{chainId:56,wallet,to:amm,txHash:hash,status:"success"}).state,"CONFIRMED"));
+test("final record remains locked",()=>assert.throws(()=>acquireIntent(storage,q,id,now),/INTENT_ALREADY_LOCKED/));
+test("corrupt record fail closed",()=>{const k=scopeKey({...q,wallet:other});storage.setItem(k,"{bad");assert.throws(()=>readIntent(storage,k),/INTENT_RECOVERY_REQUIRED/)});
+console.log("PASS",passed,"mock checks");
